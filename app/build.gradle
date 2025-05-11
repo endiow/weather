@@ -38,6 +38,11 @@ dependencies {
     // 位置服务
     implementation 'com.google.android.gms:play-services-location:21.1.0'
     
+    // Retrofit和GSON依赖
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.11.0'
+    
     // 此处暂不添加Room、Retrofit等依赖，等确认主界面无误后再添加
     
     testImplementation libs.junit

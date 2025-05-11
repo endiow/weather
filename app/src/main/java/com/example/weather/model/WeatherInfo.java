@@ -6,29 +6,42 @@ package com.example.weather.model;
 public class WeatherInfo 
 {
     private String cityName;
-    private double temperature;
-    private double minTemperature;
-    private double maxTemperature;
+    private String temperature;
+    private String minTemperature;
+    private String maxTemperature;
     private String weatherType;
-    private String description;
+    private String weatherDescription;
     private String airQuality;
     private String updateTime;
+    private String humidity;
+    private String windDirection;
+    private String windPower;
+    private String aqi;
+    private String visibility;
     
-    public WeatherInfo() {
+    public WeatherInfo() 
+    {
     }
     
-    public WeatherInfo(String cityName, double temperature, double minTemperature, 
-                      double maxTemperature, String weatherType, 
-                      String description, String airQuality, String updateTime) 
+    public WeatherInfo(String cityName, String temperature, String minTemperature, 
+                      String maxTemperature, String weatherType, 
+                      String weatherDescription, String airQuality, String updateTime,
+                      String humidity, String windDirection, String windPower,
+                      String aqi, String visibility) 
     {
         this.cityName = cityName;
         this.temperature = temperature;
         this.minTemperature = minTemperature;
         this.maxTemperature = maxTemperature;
         this.weatherType = weatherType;
-        this.description = description;
+        this.weatherDescription = weatherDescription;
         this.airQuality = airQuality;
         this.updateTime = updateTime;
+        this.humidity = humidity;
+        this.windDirection = windDirection;
+        this.windPower = windPower;
+        this.aqi = aqi;
+        this.visibility = visibility;
     }
     
     // Getters and Setters
@@ -42,32 +55,32 @@ public class WeatherInfo
         this.cityName = cityName;
     }
     
-    public double getTemperature() 
+    public String getTemperature() 
     {
         return temperature;
     }
     
-    public void setTemperature(double temperature) 
+    public void setTemperature(String temperature) 
     {
         this.temperature = temperature;
     }
     
-    public double getMinTemperature() 
+    public String getMinTemperature() 
     {
         return minTemperature;
     }
     
-    public void setMinTemperature(double minTemperature) 
+    public void setMinTemperature(String minTemperature) 
     {
         this.minTemperature = minTemperature;
     }
     
-    public double getMaxTemperature() 
+    public String getMaxTemperature() 
     {
         return maxTemperature;
     }
     
-    public void setMaxTemperature(double maxTemperature) 
+    public void setMaxTemperature(String maxTemperature) 
     {
         this.maxTemperature = maxTemperature;
     }
@@ -82,14 +95,14 @@ public class WeatherInfo
         this.weatherType = weatherType;
     }
     
-    public String getDescription() 
+    public String getWeatherDescription() 
     {
-        return description;
+        return weatherDescription;
     }
     
-    public void setDescription(String description) 
+    public void setWeatherDescription(String weatherDescription) 
     {
-        this.description = description;
+        this.weatherDescription = weatherDescription;
     }
     
     public String getAirQuality() 
@@ -112,13 +125,83 @@ public class WeatherInfo
         this.updateTime = updateTime;
     }
     
-    public String getTemperatureRange() 
+    public String getHumidity() 
     {
-        return (int)minTemperature + "° / " + (int)maxTemperature + "°";
+        return humidity;
     }
     
-    public String getTemperatureWithUnit() 
+    public void setHumidity(String humidity) 
     {
-        return (int)temperature + "°";
+        this.humidity = humidity;
+    }
+    
+    public String getWindDirection() 
+    {
+        return windDirection;
+    }
+    
+    public void setWindDirection(String windDirection) 
+    {
+        this.windDirection = windDirection;
+    }
+    
+    public String getWindPower() 
+    {
+        return windPower;
+    }
+    
+    public void setWindPower(String windPower) 
+    {
+        this.windPower = windPower;
+    }
+    
+    public String getAqi() 
+    {
+        return aqi;
+    }
+    
+    public void setAqi(String aqi) 
+    {
+        this.aqi = aqi;
+    }
+    
+    public String getVisibility() 
+    {
+        return visibility;
+    }
+    
+    public void setVisibility(String visibility) 
+    {
+        this.visibility = visibility;
+    }
+    
+    public String getTemperatureRange() 
+    {
+        if (minTemperature != null && maxTemperature != null) 
+        {
+            return minTemperature + " / " + maxTemperature;
+        }
+        return "N/A";
+    }
+    
+    /**
+     * 获取适合显示的天气信息文本
+     */
+    public String getWeatherInfoText() 
+    {
+        StringBuilder builder = new StringBuilder();
+        if (weatherDescription != null && !weatherDescription.isEmpty()) 
+        {
+            builder.append(weatherDescription);
+        }
+        if (humidity != null && !humidity.isEmpty()) 
+        {
+            builder.append(" · 湿度").append(humidity);
+        }
+        if (windDirection != null && !windDirection.isEmpty() && windPower != null && !windPower.isEmpty()) 
+        {
+            builder.append(" · ").append(windDirection).append(windPower);
+        }
+        return builder.toString();
     }
 } 
