@@ -499,7 +499,7 @@ public class MainActivity extends AppCompatActivity
                         {
                             getWeatherInfo(currentCityId);
                             
-                            // 获取15天天气预报
+                            // 获取3天天气预报
                             getWeatherForecast(currentCityId);
                         }
                         
@@ -937,7 +937,7 @@ public class MainActivity extends AppCompatActivity
         WeatherService weatherService = WeatherService.getInstance(this);
         
         // 调用天气预报API
-        weatherService.getWeatherForecast15Days(cityId, new WeatherCallback<WeatherForecastInfo>() 
+        weatherService.getWeatherForecast3Days(cityId, new WeatherCallback<WeatherForecastInfo>() 
         {
             @Override
             public void onSuccess(WeatherForecastInfo forecastInfo) 
@@ -1055,22 +1055,12 @@ public class MainActivity extends AppCompatActivity
         // 更新降水预报文本
         tvRainForecast.setText(rainInfo.getRainForecastDescription());
         
-        // 设置图标和进度条
+        // 设置图标和标题
         if (rainInfo.willRainIn2Hours()) 
         {
-            // 有降水预报，显示雨滴图标和进度条
+            // 有降水预报，显示雨滴图标
             ivRainIcon.setImageResource(R.drawable.ic_rain);
             tvRainTitle.setText("即将降水");
-            
-            // 显示进度条
-            progressRain.setVisibility(View.VISIBLE);
-            int timeToRain = rainInfo.getTimeToRain();
-            
-            if (timeToRain >= 0) 
-            {
-                // 设置进度（剩余分钟数）最大值为120分钟
-                progressRain.setProgress(timeToRain);
-            }
         } 
         else 
         {
@@ -1078,10 +1068,10 @@ public class MainActivity extends AppCompatActivity
             ivRainIcon.setImageResource(R.drawable.ic_rain);
             ivRainIcon.setColorFilter(getResources().getColor(R.color.colorAccentLight));
             tvRainTitle.setText("未来无降水");
-            
-            // 隐藏进度条
-            progressRain.setVisibility(View.GONE);
         }
+        
+        // 始终隐藏进度条，不论是否有降水
+        progressRain.setVisibility(View.GONE);
     }
 
     /**

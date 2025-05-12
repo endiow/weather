@@ -575,6 +575,116 @@ public class WeatherService
     }
 
     /**
+     * 获取3天天气预报
+     * 
+     * @param cityId 城市ID
+     * @param callback 回调接口
+     */
+    public void getWeatherForecast3Days(String cityId, final WeatherCallback<WeatherForecastInfo> callback) 
+    {
+        if (!checkInitialized(callback)) return;
+        
+        try 
+        {
+            Log.d(TAG, "获取城市" + cityId + "的3天天气预报");
+            
+            // 创建天气查询参数
+            WeatherParameter parameter = new WeatherParameter(cityId);
+            
+            // 调用API
+            qWeather.weather3d(parameter, new Callback<WeatherDailyResponse>() 
+            {
+                @Override
+                public void onSuccess(WeatherDailyResponse response) 
+                {
+                    Log.d(TAG, "获取3天天气预报成功: " + response.toString());
+                    
+                    // 创建返回数据
+                    WeatherForecastInfo forecastInfo = new WeatherForecastInfo();
+                    
+                    if (STATUS_OK.equals(response.getCode())) 
+                    {
+                        try 
+                        {
+                            // 基本信息
+                            forecastInfo.code = response.getCode();
+                            forecastInfo.updateTime = response.getUpdateTime();
+                            forecastInfo.fxLink = response.getFxLink();
+                            
+                            // 获取每日预报
+                            if (response.getDaily() != null && !response.getDaily().isEmpty()) 
+                            {
+                                List<?> dailyList = response.getDaily();
+                                
+                                for (Object daily : dailyList) 
+                                {
+                                    WeatherForecastInfo.DailyForecast forecast = new WeatherForecastInfo.DailyForecast();
+                                    
+                                    // 日期和时间
+                                    forecast.fxDate = getStringProperty(daily, "getFxDate");
+                                    
+                                    // 天气状况
+                                    forecast.textDay = getStringProperty(daily, "getTextDay");
+                                    forecast.textNight = getStringProperty(daily, "getTextNight");
+                                    
+                                    // 温度
+                                    forecast.tempMax = getStringProperty(daily, "getTempMax");
+                                    forecast.tempMin = getStringProperty(daily, "getTempMin");
+                                    
+                                    // 风况
+                                    forecast.windDirDay = getStringProperty(daily, "getWindDirDay");
+                                    forecast.windScaleDay = getStringProperty(daily, "getWindScaleDay");
+                                    
+                                    // 其他指标
+                                    forecast.humidity = getStringProperty(daily, "getHumidity");
+                                    
+                                    // 添加到预报列表
+                                    forecastInfo.addDailyForecast(forecast);
+                                }
+                            }
+                            
+                            Log.d(TAG, "解析天气预报数据成功: " + forecastInfo.dailyForecasts.size() + "天");
+                        } 
+                        catch (Exception e) 
+                        {
+                            Log.e(TAG, "解析天气预报数据失败", e);
+                            forecastInfo.error = "解析天气预报数据失败: " + e.getMessage();
+                        }
+                    } 
+                    else 
+                    {
+                        forecastInfo.error = "API返回错误: " + response.getCode();
+                    }
+                    
+                    callback.onSuccess(forecastInfo);
+                }
+
+                @Override
+                public void onFailure(ErrorResponse errorResponse) 
+                {
+                    String error = "获取天气预报失败: " + errorResponse.toString();
+                    Log.e(TAG, error);
+                    callback.onError(error);
+                }
+
+                @Override
+                public void onException(Throwable e) 
+                {
+                    String error = "获取天气预报异常: " + e.getMessage();
+                    Log.e(TAG, error, e);
+                    callback.onError(error);
+                }
+            });
+        } 
+        catch (Exception e) 
+        {
+            String error = "发送天气预报请求异常: " + e.getMessage();
+            Log.e(TAG, error, e);
+            callback.onError(error);
+        }
+    }
+
+    /**
      * 获取两小时内分钟级降水预报
      * 
      * @param latitude 纬度
