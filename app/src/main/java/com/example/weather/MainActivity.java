@@ -70,12 +70,10 @@ public class MainActivity extends AppCompatActivity
     private TextView tvCurrentWeatherBadge;
     private TextView tvNoWeatherTodos;
     private TextView tvNoAllTodos;
-    private TextView tvSwipeHint;
     private RecyclerView rvAllTodos;
     private RecyclerView rvWeatherTodos;
     private RecyclerView rvForecast;
     private Button btnAddTodo;
-    private Button btnViewMore;
     private LinearLayout bottomSheetLayout;
     private CoordinatorLayout mainLayout;
     
@@ -763,20 +761,15 @@ public class MainActivity extends AppCompatActivity
         }
     }
     
+    /**
+     * 设置点击事件
+     */
     private void setupClickListeners() 
     {
-        // 设置添加待办事项按钮点击事件
         btnAddTodo.setOnClickListener(v -> 
         {
-            // 仅界面示例，不实现功能
-            Toast.makeText(this, "添加待办事项功能尚未实现", Toast.LENGTH_SHORT).show();
-        });
-        
-        // 设置查看更多天气预报按钮点击事件
-        btnViewMore.setOnClickListener(v -> 
-        {
-            // 暂时显示简单的提示，后续可以跳转到详细预报页面
-            Toast.makeText(this, "15天预报功能即将上线", Toast.LENGTH_SHORT).show();
+            // 暂时显示简单的提示，待办事项功能尚未实现
+            Toast.makeText(this, "待办事项功能开发中", Toast.LENGTH_SHORT).show();
         });
     }
     
@@ -836,12 +829,10 @@ public class MainActivity extends AppCompatActivity
         tvCurrentWeatherBadge = findViewById(R.id.tvCurrentWeatherBadge);
         tvNoWeatherTodos = findViewById(R.id.tvNoWeatherTodos);
         tvNoAllTodos = findViewById(R.id.tvNoAllTodos);
-        tvSwipeHint = findViewById(R.id.tvSwipeHint);
         rvAllTodos = findViewById(R.id.rvAllTodos);
         rvWeatherTodos = findViewById(R.id.rvWeatherTodos);
         rvForecast = findViewById(R.id.rvForecast);
         btnAddTodo = findViewById(R.id.btnAddTodo);
-        btnViewMore = findViewById(R.id.btnViewMore);
         bottomSheetLayout = findViewById(R.id.bottomSheetLayout);
         mainLayout = findViewById(R.id.main);
         
@@ -866,43 +857,50 @@ public class MainActivity extends AppCompatActivity
     {
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheetLayout);
         
+        // 获取上滑提示布局
+        View swipeUpHintLayout = findViewById(R.id.swipeUpHintLayout);
+        
         // 设置回调
         bottomSheetBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() 
         {
+            private boolean hasBeenExpanded = false;
+            
             @Override
             public void onStateChanged(@NonNull View bottomSheet, int newState) 
             {
-                // 根据底部面板的状态更新UI
-                if (newState == BottomSheetBehavior.STATE_EXPANDED) 
-                {
-                    // 当面板完全展开时，隐藏上滑提示
-                    tvSwipeHint.setVisibility(View.GONE);
-                } 
-                else if (newState == BottomSheetBehavior.STATE_COLLAPSED) 
-                {
-                    // 当面板收起时，显示上滑提示
-                    tvSwipeHint.setVisibility(View.VISIBLE);
+                // 检测抽屉是否被展开过
+                if (newState == BottomSheetBehavior.STATE_EXPANDED || 
+                    newState == BottomSheetBehavior.STATE_HALF_EXPANDED) {
+                    
+                    // 隐藏上滑提示
+                    if (swipeUpHintLayout != null && !hasBeenExpanded) {
+                        swipeUpHintLayout.animate()
+                            .alpha(0f)
+                            .setDuration(200)
+                            .withEndAction(() -> swipeUpHintLayout.setVisibility(View.GONE))
+                            .start();
+                        hasBeenExpanded = true;
+                    }
                 }
             }
 
             @Override
             public void onSlide(@NonNull View bottomSheet, float slideOffset) 
             {
-                // 根据滑动的位置调整上滑提示的透明度
-                float alpha = 1 - slideOffset;
-                tvSwipeHint.setAlpha(alpha);
+                // 根据滑动进度调整上滑提示的透明度
+                if (swipeUpHintLayout != null && !hasBeenExpanded) {
+                    // slideOffset范围从0到1，根据滑动进度逐渐隐藏提示
+                    if (slideOffset > 0.1f) {
+                        float alpha = Math.max(0f, 1f - ((slideOffset - 0.1f) / 0.3f));
+                        swipeUpHintLayout.setAlpha(alpha);
+                    }
+                }
             }
         });
         
-        // 设置初始状态为收起
-        bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-        
-        // 设置上滑提示的点击事件
-        tvSwipeHint.setOnClickListener(v -> 
-        {
-            // 点击上滑提示时展开底部面板
-            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
-        });
+        // 保持原有的peekHeight设置
+        int peekHeightInPixels = (int) (getResources().getDisplayMetrics().density * 35);
+        bottomSheetBehavior.setPeekHeight(peekHeightInPixels);
     }
     
     /**
