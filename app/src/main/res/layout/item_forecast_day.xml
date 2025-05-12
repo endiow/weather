@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="4dp"
+    app:cardCornerRadius="10dp"
+    app:cardElevation="1dp"
+    app:cardBackgroundColor="#FFFFFF">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="8dp">
+
+        <!-- 日期 -->
+        <TextView
+            android:id="@+id/tvForecastDate"
+            android:layout_width="52dp"
+            android:layout_height="wrap_content"
+            android:text="今天"
+            android:textColor="#333333"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <!-- 天气图标 -->
+        <ImageView
+            android:id="@+id/ivWeatherIcon"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="4dp"
+            android:src="@drawable/ic_sunny" />
+
+        <!-- 天气描述 -->
+        <TextView
+            android:id="@+id/tvWeatherDesc"
+            android:layout_width="42dp"
+            android:layout_height="wrap_content"
+            android:text="晴"
+            android:layout_marginStart="4dp"
+            android:textColor="#333333"
+            android:textSize="14sp" />
+
+        <!-- 温度条布局 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- 最低温度 -->
+            <TextView
+                android:id="@+id/tvMinTemp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="17°"
+                android:textColor="#2196F3"
+                android:textSize="14sp" />
+
+            <!-- 温度条容器 -->
+            <FrameLayout
+                android:layout_width="80dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp">
+
+                <!-- 温度条背景 -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="3dp"
+                    android:background="#E0E0E0"
+                    android:layout_gravity="center_vertical" />
+
+                <!-- 温度变化指示器 -->
+                <View
+                    android:id="@+id/tempRangeIndicator"
+                    android:layout_width="match_parent"
+                    android:layout_height="3dp"
+                    android:background="@drawable/temp_range_gradient"
+                    android:layout_gravity="center_vertical|start" />
+            </FrameLayout>
+
+            <!-- 最高温度 -->
+            <TextView
+                android:id="@+id/tvMaxTemp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="31°"
+                android:textColor="#FF5722"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView> 

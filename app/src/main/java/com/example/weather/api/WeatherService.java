@@ -18,6 +18,7 @@ import com.qweather.sdk.response.weather.WeatherDailyResponse;
 import com.qweather.sdk.response.weather.WeatherNowResponse;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 /**
  * 和风天气服务类
@@ -126,386 +127,447 @@ public class WeatherService
         }
         return true;
     }
-
+    
     /**
-     * 获取实时天气数据
+     * 通过经纬度获取城市信息
      * 
-     * @param location 位置坐标，格式：经度,纬度 或 城市ID
+     * @param latitude 纬度
+     * @param longitude 经度
      * @param callback 回调接口
      */
-    public void getWeatherNow(String location, final WeatherCallback<WeatherNowResponse> callback) 
+    public void getCityInfo(double latitude, double longitude, final WeatherCallback<CityInfo> callback) 
     {
         if (!checkInitialized(callback)) return;
         
         try 
         {
-            WeatherParameter parameter = new WeatherParameter(location)
-                    .lang(Lang.ZH_HANS)
-                    .unit(Unit.METRIC);
-    
-            qWeather.weatherNow(parameter, new Callback<WeatherNowResponse>() 
-            {
-                @Override
-                public void onSuccess(WeatherNowResponse response) 
-                {
-                    Log.i(TAG, "获取实时天气成功: " + response.toString());
-                    callback.onSuccess(response);
-                }
-    
-                @Override
-                public void onFailure(ErrorResponse errorResponse) 
-                {
-                    String errorMsg = "错误: " + errorResponse.toString();
-                    Log.i(TAG, errorMsg);
-                    callback.onError(errorMsg);
-                }
-    
-                @Override
-                public void onException(Throwable e) 
-                {
-                    e.printStackTrace();
-                    String errorMsg = "网络异常: " + e.getMessage();
-                    Log.e(TAG, errorMsg, e);
-                    callback.onError(errorMsg);
-                }
-            });
-        } 
-        catch (Exception e) 
-        {
-            String errorMsg = "发送天气请求异常: " + e.getMessage();
-            Log.e(TAG, errorMsg, e);
-            callback.onError(errorMsg);
-        }
-    }
-
-    /**
-     * 获取三日天气预报
-     * 
-     * @param location 位置坐标，格式：经度,纬度 或 城市ID
-     * @param callback 回调接口
-     */
-    public void getWeather3d(String location, final WeatherCallback<WeatherDailyResponse> callback) 
-    {
-        if (!checkInitialized(callback)) return;
-        
-        try 
-        {
-            WeatherParameter parameter = new WeatherParameter(location)
-                    .lang(Lang.ZH_HANS)
-                    .unit(Unit.METRIC);
-    
-            qWeather.weather3d(parameter, new Callback<WeatherDailyResponse>() 
-            {
-                @Override
-                public void onSuccess(WeatherDailyResponse response) 
-                {
-                    Log.i(TAG, "获取三日天气预报成功: " + response.toString());
-                    callback.onSuccess(response);
-                }
-    
-                @Override
-                public void onFailure(ErrorResponse errorResponse) 
-                {
-                    String errorMsg = "错误: " + errorResponse.toString();
-                    Log.i(TAG, errorMsg);
-                    callback.onError(errorMsg);
-                }
-    
-                @Override
-                public void onException(Throwable e) 
-                {
-                    e.printStackTrace();
-                    String errorMsg = "网络异常: " + e.getMessage();
-                    Log.e(TAG, errorMsg, e);
-                    callback.onError(errorMsg);
-                }
-            });
-        } 
-        catch (Exception e) 
-        {
-            String errorMsg = "发送天气预报请求异常: " + e.getMessage();
-            Log.e(TAG, errorMsg, e);
-            callback.onError(errorMsg);
-        }
-    }
-
-    /**
-     * 获取空气质量数据
-     * 
-     * @param location 位置坐标，格式：经度,纬度 或 城市ID
-     * @param callback 回调接口
-     */
-    public void getAirNow(String location, final WeatherCallback<AirNowResponse> callback) 
-    {
-        if (!checkInitialized(callback)) return;
-        
-        try 
-        {
-            AirParameter parameter = new AirParameter(location)
-                    .lang(Lang.ZH_HANS);
-    
-            qWeather.airNow(parameter, new Callback<AirNowResponse>() 
-            {
-                @Override
-                public void onSuccess(AirNowResponse response) 
-                {
-                    Log.i(TAG, "获取空气质量成功: " + response.toString());
-                    callback.onSuccess(response);
-                }
-    
-                @Override
-                public void onFailure(ErrorResponse errorResponse) 
-                {
-                    String errorMsg = "错误: " + errorResponse.toString();
-                    Log.i(TAG, errorMsg);
-                    callback.onError(errorMsg);
-                }
-    
-                @Override
-                public void onException(Throwable e) 
-                {
-                    e.printStackTrace();
-                    String errorMsg = "网络异常: " + e.getMessage();
-                    Log.e(TAG, errorMsg, e);
-                    callback.onError(errorMsg);
-                }
-            });
-        } 
-        catch (Exception e) 
-        {
-            String errorMsg = "发送空气质量请求异常: " + e.getMessage();
-            Log.e(TAG, errorMsg, e);
-            callback.onError(errorMsg);
-        }
-    }
-    
-    /**
-     * 根据经纬度获取城市名称
-     * 
-     * @param location 位置坐标，格式：经度,纬度
-     * @param callback 回调接口
-     */
-    public void getCityName(String location, final WeatherCallback<GeoCityLookupResponse> callback) 
-    {
-        if (!checkInitialized(callback)) return;
-        
-        try 
-        {
-            GeoCityLookupParameter parameter = new GeoCityLookupParameter(location)
-                    .lang(Lang.ZH_HANS);
-    
+            // 构建格式：经度,纬度
+            String location = String.format(java.util.Locale.US, "%.4f,%.4f", longitude, latitude);
+            Log.d(TAG, "查询城市信息: " + location);
+            
+            // 创建参数，仅使用位置信息
+            GeoCityLookupParameter parameter = new GeoCityLookupParameter(location);
+            
+            // 调用API
             qWeather.geoCityLookup(parameter, new Callback<GeoCityLookupResponse>() 
             {
                 @Override
                 public void onSuccess(GeoCityLookupResponse response) 
                 {
-                    Log.i(TAG, "获取城市信息成功: " + response.toString());
-                    callback.onSuccess(response);
+                    Log.d(TAG, "获取城市信息成功: " + response.toString());
+                    
+                    // 创建返回数据
+                    CityInfo cityInfo = new CityInfo();
+                    
+                    if (STATUS_OK.equals(response.getCode())) 
+                    {
+                        if (response.getLocation() != null && !response.getLocation().isEmpty()) 
+                        {
+                            // 获取第一个结果
+                            Object location = response.getLocation().get(0);
+                            
+                            try 
+                            {
+                                // 通过反射读取属性
+                                cityInfo.code = response.getCode();
+                                
+                                // 获取各个字段
+                                cityInfo.name = getStringProperty(location, "getName");
+                                cityInfo.id = getStringProperty(location, "getId");
+                                cityInfo.lat = getStringProperty(location, "getLat");
+                                cityInfo.lon = getStringProperty(location, "getLon");
+                                cityInfo.adm2 = getStringProperty(location, "getAdm2");
+                                cityInfo.adm1 = getStringProperty(location, "getAdm1");
+                                cityInfo.country = getStringProperty(location, "getCountry");
+                                
+                                // 记录成功
+                                Log.d(TAG, "城市信息解析成功: " + cityInfo.name + ", " + cityInfo.adm1);
+                            } 
+                            catch (Exception e) 
+                            {
+                                Log.e(TAG, "解析城市信息失败", e);
+                                cityInfo.error = "解析城市数据失败: " + e.getMessage();
+                            }
+                        } 
+                        else 
+                        {
+                            cityInfo.error = "未找到城市信息";
+                        }
+                    } 
+                    else 
+                    {
+                        cityInfo.error = "API返回错误: " + response.getCode();
+                    }
+                    
+                    callback.onSuccess(cityInfo);
                 }
-    
+
                 @Override
                 public void onFailure(ErrorResponse errorResponse) 
                 {
-                    String errorMsg = "错误: " + errorResponse.toString();
-                    Log.i(TAG, errorMsg);
-                    callback.onError(errorMsg);
+                    String error = "获取城市信息失败: " + errorResponse.toString();
+                    Log.e(TAG, error);
+                    callback.onError(error);
                 }
-    
+
                 @Override
                 public void onException(Throwable e) 
                 {
-                    e.printStackTrace();
-                    String errorMsg = "网络异常: " + e.getMessage();
-                    Log.e(TAG, errorMsg, e);
-                    callback.onError(errorMsg);
+                    String error = "获取城市信息异常: " + e.getMessage();
+                    Log.e(TAG, error, e);
+                    callback.onError(error);
                 }
             });
         } 
         catch (Exception e) 
         {
-            String errorMsg = "发送城市查询请求异常: " + e.getMessage();
-            Log.e(TAG, errorMsg, e);
-            callback.onError(errorMsg);
+            String error = "发送城市查询请求异常: " + e.getMessage();
+            Log.e(TAG, error, e);
+            callback.onError(error);
         }
     }
     
     /**
-     * 解析城市信息响应
-     * 
-     * @param response GeoCityLookupResponse响应对象
-     * @return 城市信息对象
+     * 通过反射获取对象属性值
      */
-    public CityInfo parseCityInfo(GeoCityLookupResponse response) 
-    {
-        CityInfo cityInfo = new CityInfo();
-        
-        try 
-        {
-            // 确保响应有效且有数据
-            if (response.getCode().equals(STATUS_OK) && response.getLocation() != null && !response.getLocation().isEmpty()) 
-            {
-                // 获取第一个城市结果
-                Object locationObj = response.getLocation().get(0);
-                
-                try 
-                {
-                    // 尝试使用反射获取字段值
-                    Method getNameMethod = locationObj.getClass().getMethod("getName");
-                    Method getAdm1Method = locationObj.getClass().getMethod("getAdm1");
-                    Method getAdm2Method = locationObj.getClass().getMethod("getAdm2");
-                    Method getCountryMethod = locationObj.getClass().getMethod("getCountry");
-                    Method getLatMethod = locationObj.getClass().getMethod("getLat");
-                    Method getLonMethod = locationObj.getClass().getMethod("getLon");
-                    
-                    cityInfo.name = (String) getNameMethod.invoke(locationObj);
-                    cityInfo.adm1 = (String) getAdm1Method.invoke(locationObj);
-                    cityInfo.adm2 = (String) getAdm2Method.invoke(locationObj);
-                    cityInfo.country = (String) getCountryMethod.invoke(locationObj);
-                    cityInfo.lat = (String) getLatMethod.invoke(locationObj);
-                    cityInfo.lon = (String) getLonMethod.invoke(locationObj);
-                } 
-                catch (Exception e) 
-                {
-                    Log.e(TAG, "反射获取位置信息失败: " + e.getMessage());
-                    
-                    // 如果反射失败，尝试从toString()解析
-                    String locationStr = locationObj.toString();
-                    Log.d(TAG, "位置对象字符串: " + locationStr);
-                    
-                    // 简单解析字符串以获取所需字段
-                    if (locationStr.contains("name=")) {
-                        cityInfo.name = extractField(locationStr, "name=", ",");
-                    }
-                    if (locationStr.contains("adm1=")) {
-                        cityInfo.adm1 = extractField(locationStr, "adm1=", ",");
-                    }
-                    if (locationStr.contains("adm2=")) {
-                        cityInfo.adm2 = extractField(locationStr, "adm2=", ",");
-                    }
-                    if (locationStr.contains("country=")) {
-                        cityInfo.country = extractField(locationStr, "country=", ",");
-                    }
-                    if (locationStr.contains("lat=")) {
-                        cityInfo.lat = extractField(locationStr, "lat=", ",");
-                    }
-                    if (locationStr.contains("lon=")) {
-                        cityInfo.lon = extractField(locationStr, "lon=", ",");
-                    }
-                }
-                
-                // 构建显示名称
-                cityInfo.displayName = cityInfo.name;
-                if (cityInfo.adm2 != null && !cityInfo.adm2.isEmpty() && !cityInfo.adm2.equals(cityInfo.name)) 
-                {
-                    cityInfo.displayName = cityInfo.adm2 + " " + cityInfo.name;
-                }
-                
-                Log.d(TAG, "解析的城市信息 - 城市: " + cityInfo.name + 
-                        ", 地区: " + cityInfo.adm2 + 
-                        ", 省份: " + cityInfo.adm1 + 
-                        ", 国家: " + cityInfo.country +
-                        ", 纬度: " + cityInfo.lat +
-                        ", 经度: " + cityInfo.lon);
-            }
-            else 
-            {
-                Log.w(TAG, "和风天气API返回状态码: " + response.getCode() + "，无有效数据");
-                cityInfo.error = true;
-                cityInfo.errorMessage = "API返回错误或无数据: " + response.getCode();
-            }
-        }
-        catch (Exception e) 
-        {
-            Log.e(TAG, "解析城市信息异常: " + e.getMessage(), e);
-            cityInfo.error = true;
-            cityInfo.errorMessage = "解析异常: " + e.getMessage();
-        }
-        
-        return cityInfo;
-    }
-    
-    /**
-     * 从字符串中提取字段值
-     * 
-     * @param source 源字符串
-     * @param startStr 起始标记
-     * @param endStr 结束标记
-     * @return 提取的字段值
-     */
-    private String extractField(String source, String startStr, String endStr) 
+    private String getStringProperty(Object obj, String methodName) 
     {
         try 
         {
-            int startIndex = source.indexOf(startStr) + startStr.length();
-            if (startIndex < startStr.length()) return "";
-            
-            int endIndex = source.indexOf(endStr, startIndex);
-            if (endIndex < 0) endIndex = source.length();
-            
-            return source.substring(startIndex, endIndex).trim();
+            Method method = obj.getClass().getMethod(methodName);
+            Object result = method.invoke(obj);
+            return result != null ? result.toString() : "";
         } 
         catch (Exception e) 
         {
+            Log.w(TAG, "获取属性失败: " + methodName);
             return "";
         }
     }
-
+    
     /**
-     * 城市信息类
+     * 通过经纬度获取实时空气质量信息
+     * 
+     * @param latitude 纬度
+     * @param longitude 经度
+     * @param callback 回调接口
      */
-    public static class CityInfo 
+    public void getAirQuality(double latitude, double longitude, final WeatherCallback<AirQualityInfo> callback) 
     {
-        public String name = "";       // 城市名称
-        public String adm1 = "";       // 省份
-        public String adm2 = "";       // 地区
-        public String country = "";    // 国家
-        public String lat = "";        // 纬度
-        public String lon = "";        // 经度
-        public String displayName = "当前位置";  // 显示名称
-        public boolean error = false;  // 是否发生错误
-        public String errorMessage = ""; // 错误信息
+        if (!checkInitialized(callback)) return;
         
-        /**
-         * 获取纬度值
-         * @param defaultValue 默认值
-         * @return 纬度数值
-         */
-        public double getLatitude(double defaultValue) 
+        try 
         {
-            try 
+            Log.d(TAG, "获取位置(" + latitude + "," + longitude + ")的空气质量");
+            
+            // 构建位置字符串: 经度,纬度
+            String location = String.format(java.util.Locale.US, "%.4f,%.4f", longitude, latitude);
+            
+            // 创建空气质量查询参数
+            AirParameter parameter = new AirParameter(location);
+            
+            // 调用API
+            qWeather.airNow(parameter, new Callback<AirNowResponse>() 
             {
-                return Double.parseDouble(lat);
-            } 
-            catch (Exception e) 
-            {
-                return defaultValue;
-            }
+                @Override
+                public void onSuccess(AirNowResponse response) 
+                {
+                    Log.d(TAG, "获取空气质量成功: " + response.toString());
+                    
+                    // 创建返回数据
+                    AirQualityInfo airInfo = new AirQualityInfo();
+                    
+                    if (STATUS_OK.equals(response.getCode())) 
+                    {
+                        try 
+                        {
+                            // 基本信息
+                            airInfo.code = response.getCode();
+                            
+                            // 空气质量数据
+                            if (response.getNow() != null) 
+                            {
+                                Object now = response.getNow();
+                                
+                                // 通过反射获取各个字段
+                                airInfo.aqi = getStringProperty(now, "getAqi");
+                                airInfo.category = getStringProperty(now, "getCategory");
+                                airInfo.level = getStringProperty(now, "getLevel");
+                                airInfo.pollutantName = getStringProperty(now, "getPrimary");
+                                
+                                // 设置AQI显示文本
+                                if (!airInfo.category.isEmpty()) 
+                                {
+                                    airInfo.aqiDisplay = airInfo.category + " " + airInfo.aqi;
+                                }
+                                
+                                Log.d(TAG, "解析空气质量数据成功: " + airInfo.getDisplayText());
+                            }
+                        } 
+                        catch (Exception e) 
+                        {
+                            Log.e(TAG, "解析空气质量数据失败", e);
+                            airInfo.error = "解析空气质量数据失败: " + e.getMessage();
+                        }
+                    } 
+                    else 
+                    {
+                        airInfo.error = "API返回错误: " + response.getCode();
+                    }
+                    
+                    callback.onSuccess(airInfo);
+                }
+
+                @Override
+                public void onFailure(ErrorResponse errorResponse) 
+                {
+                    String error = "获取空气质量失败: " + errorResponse.toString();
+                    Log.e(TAG, error);
+                    callback.onError(error);
+                }
+
+                @Override
+                public void onException(Throwable e) 
+                {
+                    String error = "获取空气质量异常: " + e.getMessage();
+                    Log.e(TAG, error, e);
+                    callback.onError(error);
+                }
+            });
+        } 
+        catch (Exception e) 
+        {
+            String error = "发送空气质量请求异常: " + e.getMessage();
+            Log.e(TAG, error, e);
+            callback.onError(error);
         }
+    }
+    
+    /**
+     * 通过城市ID获取实时天气信息
+     * 
+     * @param cityId 城市ID
+     * @param callback 回调接口
+     */
+    public void getWeatherNow(String cityId, final WeatherCallback<WeatherInfo> callback) 
+    {
+        if (!checkInitialized(callback)) return;
         
-        /**
-         * 获取经度值
-         * @param defaultValue 默认值
-         * @return 经度数值
-         */
-        public double getLongitude(double defaultValue) 
+        try 
         {
-            try 
+            Log.d(TAG, "获取城市" + cityId + "的实时天气");
+            
+            // 创建天气查询参数
+            WeatherParameter parameter = new WeatherParameter(cityId);
+            
+            // 调用API
+            qWeather.weatherNow(parameter, new Callback<WeatherNowResponse>() 
             {
-                return Double.parseDouble(lon);
-            } 
-            catch (Exception e) 
-            {
-                return defaultValue;
-            }
+                @Override
+                public void onSuccess(WeatherNowResponse response) 
+                {
+                    Log.d(TAG, "获取天气成功: " + response.toString());
+                    
+                    // 创建返回数据
+                    WeatherInfo weatherInfo = new WeatherInfo();
+                    
+                    if (STATUS_OK.equals(response.getCode())) 
+                    {
+                        try 
+                        {
+                            // 基本信息
+                            weatherInfo.code = response.getCode();
+                            weatherInfo.updateTime = response.getUpdateTime();
+                            weatherInfo.fxLink = response.getFxLink();
+                            
+                            // 获取now对象
+                            if (response.getNow() != null) 
+                            {
+                                Object now = response.getNow();
+                                
+                                // 通过反射获取各个字段
+                                weatherInfo.obsTime = getStringProperty(now, "getObsTime");
+                                weatherInfo.temp = getStringProperty(now, "getTemp");
+                                weatherInfo.feelsLike = getStringProperty(now, "getFeelsLike");
+                                weatherInfo.icon = getStringProperty(now, "getIcon");
+                                weatherInfo.text = getStringProperty(now, "getText");
+                                weatherInfo.wind360 = getStringProperty(now, "getWind360");
+                                weatherInfo.windDir = getStringProperty(now, "getWindDir");
+                                weatherInfo.windScale = getStringProperty(now, "getWindScale");
+                                weatherInfo.windSpeed = getStringProperty(now, "getWindSpeed");
+                                weatherInfo.humidity = getStringProperty(now, "getHumidity");
+                                weatherInfo.precip = getStringProperty(now, "getPrecip");
+                                weatherInfo.pressure = getStringProperty(now, "getPressure");
+                                weatherInfo.vis = getStringProperty(now, "getVis");
+                                weatherInfo.cloud = getStringProperty(now, "getCloud");
+                                weatherInfo.dew = getStringProperty(now, "getDew");
+                            }
+                            
+                            Log.d(TAG, "解析天气数据成功: " + weatherInfo.text + ", " + weatherInfo.temp + "°C");
+                        } 
+                        catch (Exception e) 
+                        {
+                            Log.e(TAG, "解析天气数据失败", e);
+                            weatherInfo.error = "解析天气数据失败: " + e.getMessage();
+                        }
+                    } 
+                    else 
+                    {
+                        weatherInfo.error = "API返回错误: " + response.getCode();
+                    }
+                    
+                    callback.onSuccess(weatherInfo);
+                }
+
+                @Override
+                public void onFailure(ErrorResponse errorResponse) 
+                {
+                    String error = "获取天气失败: " + errorResponse.toString();
+                    Log.e(TAG, error);
+                    callback.onError(error);
+                }
+
+                @Override
+                public void onException(Throwable e) 
+                {
+                    String error = "获取天气异常: " + e.getMessage();
+                    Log.e(TAG, error, e);
+                    callback.onError(error);
+                }
+            });
+        } 
+        catch (Exception e) 
+        {
+            String error = "发送天气请求异常: " + e.getMessage();
+            Log.e(TAG, error, e);
+            callback.onError(error);
+        }
+    }
+    
+    /**
+     * 通过反射获取对象属性对象
+     */
+    private Object getObjectProperty(Object obj, String methodName) 
+    {
+        try 
+        {
+            Method method = obj.getClass().getMethod(methodName);
+            return method.invoke(obj);
+        } 
+        catch (Exception e) 
+        {
+            Log.w(TAG, "获取对象属性失败: " + methodName);
+            return null;
         }
     }
 
     /**
-     * 天气回调接口
+     * 获取15天天气预报
+     * 
+     * @param cityId 城市ID
+     * @param callback 回调接口
      */
-    public interface WeatherCallback<T> 
+    public void getWeatherForecast15Days(String cityId, final WeatherCallback<WeatherForecastInfo> callback) 
     {
-        void onSuccess(T response);
-        void onError(String message);
+        if (!checkInitialized(callback)) return;
+        
+        try 
+        {
+            Log.d(TAG, "获取城市" + cityId + "的15天天气预报");
+            
+            // 创建天气查询参数
+            WeatherParameter parameter = new WeatherParameter(cityId);
+            
+            // 调用API
+            qWeather.weather15d(parameter, new Callback<WeatherDailyResponse>() 
+            {
+                @Override
+                public void onSuccess(WeatherDailyResponse response) 
+                {
+                    Log.d(TAG, "获取15天天气预报成功: " + response.toString());
+                    
+                    // 创建返回数据
+                    WeatherForecastInfo forecastInfo = new WeatherForecastInfo();
+                    
+                    if (STATUS_OK.equals(response.getCode())) 
+                    {
+                        try 
+                        {
+                            // 基本信息
+                            forecastInfo.code = response.getCode();
+                            forecastInfo.updateTime = response.getUpdateTime();
+                            forecastInfo.fxLink = response.getFxLink();
+                            
+                            // 获取每日预报
+                            if (response.getDaily() != null && !response.getDaily().isEmpty()) 
+                            {
+                                List<?> dailyList = response.getDaily();
+                                
+                                for (Object daily : dailyList) 
+                                {
+                                    WeatherForecastInfo.DailyForecast forecast = new WeatherForecastInfo.DailyForecast();
+                                    
+                                    // 日期和时间
+                                    forecast.fxDate = getStringProperty(daily, "getFxDate");
+                                    
+                                    // 天气状况
+                                    forecast.textDay = getStringProperty(daily, "getTextDay");
+                                    forecast.textNight = getStringProperty(daily, "getTextNight");
+                                    
+                                    // 温度
+                                    forecast.tempMax = getStringProperty(daily, "getTempMax");
+                                    forecast.tempMin = getStringProperty(daily, "getTempMin");
+                                    
+                                    // 风况
+                                    forecast.windDirDay = getStringProperty(daily, "getWindDirDay");
+                                    forecast.windScaleDay = getStringProperty(daily, "getWindScaleDay");
+                                    
+                                    // 其他指标
+                                    forecast.humidity = getStringProperty(daily, "getHumidity");
+                                    
+                                    // 添加到预报列表
+                                    forecastInfo.addDailyForecast(forecast);
+                                }
+                            }
+                            
+                            Log.d(TAG, "解析天气预报数据成功: " + forecastInfo.dailyForecasts.size() + "天");
+                        } 
+                        catch (Exception e) 
+                        {
+                            Log.e(TAG, "解析天气预报数据失败", e);
+                            forecastInfo.error = "解析天气预报数据失败: " + e.getMessage();
+                        }
+                    } 
+                    else 
+                    {
+                        forecastInfo.error = "API返回错误: " + response.getCode();
+                    }
+                    
+                    callback.onSuccess(forecastInfo);
+                }
+
+                @Override
+                public void onFailure(ErrorResponse errorResponse) 
+                {
+                    String error = "获取天气预报失败: " + errorResponse.toString();
+                    Log.e(TAG, error);
+                    callback.onError(error);
+                }
+
+                @Override
+                public void onException(Throwable e) 
+                {
+                    String error = "获取天气预报异常: " + e.getMessage();
+                    Log.e(TAG, error, e);
+                    callback.onError(error);
+                }
+            });
+        } 
+        catch (Exception e) 
+        {
+            String error = "发送天气预报请求异常: " + e.getMessage();
+            Log.e(TAG, error, e);
+            callback.onError(error);
+        }
     }
 } 

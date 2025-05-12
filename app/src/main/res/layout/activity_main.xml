@@ -5,7 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/weather_gradient_background"
+    android:background="@drawable/bg_weather_default"
     tools:context=".MainActivity">
 
     <!-- 顶部天气信息区域 -->
@@ -18,17 +18,20 @@
         android:paddingEnd="16dp"
         android:paddingBottom="24dp">
 
-        <!-- 位置信息 -->
+        <!-- 位置信息 - 适配两级地理信息显示 -->
         <TextView
             android:id="@+id/tvCityName"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:drawableStart="@android:drawable/ic_menu_mylocation"
             android:drawablePadding="8dp"
-            android:text="北京市"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="正在获取位置..."
             android:textColor="#FFFFFF"
-            android:textSize="20sp"
+            android:textSize="18sp"
             android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -99,7 +102,7 @@
             android:id="@+id/tvAirQuality"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="12dp"
             android:background="@drawable/rounded_air_quality_bg"
             android:paddingStart="12dp"
             android:paddingTop="4dp"
@@ -111,12 +114,60 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/tvWeatherDescription" />
 
+        <!-- 天气预报标题 -->
+        <LinearLayout
+            android:id="@+id/forecastTitleLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="14dp"
+            android:orientation="horizontal"
+            app:layout_constraintTop_toBottomOf="@+id/tvAirQuality">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="未来天气"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnViewMore"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:background="@drawable/view_more_button_bg"
+                android:text="查看15天预报"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- 3天天气预报列表 - 垂直布局 -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvForecast"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="4dp"
+            android:maxHeight="120dp"
+            android:clipToPadding="false"
+            android:orientation="vertical"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toBottomOf="@+id/forecastTitleLayout"
+            app:layout_constraintBottom_toTopOf="@+id/tvSwipeHint"
+            app:layout_constraintVertical_bias="0.0"
+            app:layout_constraintVertical_chainStyle="packed" />
+
         <!-- 提示用户可以上拉查看待办事项 -->
         <TextView
             android:id="@+id/tvSwipeHint"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="32dp"
+            android:layout_marginBottom="16dp"
             android:drawableBottom="@android:drawable/arrow_up_float"
             android:drawablePadding="4dp"
             android:text="上滑查看待办事项"
