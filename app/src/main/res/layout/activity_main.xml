@@ -24,12 +24,12 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:drawableStart="@android:drawable/ic_menu_mylocation"
-            android:drawablePadding="8dp"
+            android:drawablePadding="6dp"
             android:ellipsize="end"
             android:maxLines="1"
             android:text="正在获取位置..."
             android:textColor="#FFFFFF"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -40,10 +40,10 @@
             android:id="@+id/tvUpdateTime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:text="20分钟前更新"
             android:textColor="#DDFFFFFF"
-            android:textSize="12sp"
+            android:textSize="11sp"
             app:layout_constraintStart_toStartOf="@+id/tvCityName"
             app:layout_constraintTop_toBottomOf="@+id/tvCityName" />
 
@@ -52,7 +52,7 @@
             android:id="@+id/tvTemperature"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="12dp"
             android:text="26°"
             android:textColor="#FFFFFF"
             android:textSize="72sp"
@@ -65,10 +65,10 @@
             android:id="@+id/tvWeatherType"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
+            android:layout_marginStart="12dp"
             android:text="晴"
             android:textColor="#FFFFFF"
-            android:textSize="24sp"
+            android:textSize="22sp"
             app:layout_constraintBottom_toBottomOf="@+id/tvTemperature"
             app:layout_constraintStart_toEndOf="@+id/tvTemperature"
             app:layout_constraintTop_toTopOf="@+id/tvTemperature" />
@@ -78,10 +78,10 @@
             android:id="@+id/tvTemperatureRange"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="4dp"
             android:text="24° / 31°"
             android:textColor="#FFFFFF"
-            android:textSize="16sp"
+            android:textSize="14sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/tvTemperature" />
 
@@ -90,10 +90,10 @@
             android:id="@+id/tvWeatherDescription"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="6dp"
             android:text="今日天气舒适，适合外出活动"
             android:textColor="#FFFFFF"
-            android:textSize="14sp"
+            android:textSize="12sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/tvTemperatureRange" />
 
@@ -102,77 +102,177 @@
             android:id="@+id/tvAirQuality"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="8dp"
             android:background="@drawable/rounded_air_quality_bg"
-            android:paddingStart="12dp"
-            android:paddingTop="4dp"
-            android:paddingEnd="12dp"
-            android:paddingBottom="4dp"
+            android:paddingStart="10dp"
+            android:paddingTop="3dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="3dp"
             android:text="空气优 19"
             android:textColor="#FFFFFF"
-            android:textSize="14sp"
+            android:textSize="12sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/tvWeatherDescription" />
 
-        <!-- 天气预报标题 -->
-        <LinearLayout
-            android:id="@+id/forecastTitleLayout"
+        <!-- 降水预报卡片 -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/rainForecastView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:layout_marginStart="14dp"
-            android:layout_marginEnd="14dp"
-            android:orientation="horizontal"
+            android:layout_marginStart="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="0dp"
+            android:layout_marginBottom="6dp"
+            app:cardBackgroundColor="#33FFFFFF"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
             app:layout_constraintTop_toBottomOf="@+id/tvAirQuality">
 
-            <TextView
-                android:layout_width="0dp"
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="未来天气"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:paddingStart="16dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="8dp">
 
-            <Button
-                android:id="@+id/btnViewMore"
-                android:layout_width="wrap_content"
-                android:layout_height="32dp"
-                android:background="@drawable/view_more_button_bg"
-                android:text="查看15天预报"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp" />
-        </LinearLayout>
+                <!-- 降水状态图标 -->
+                <ImageView
+                    android:id="@+id/ivRainIcon"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@android:drawable/ic_menu_compass"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:tint="#4FC3F7" />
 
-        <!-- 3天天气预报列表 - 垂直布局 -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvForecast"
+                <!-- 降水状态标题 -->
+                <TextView
+                    android:id="@+id/tvRainTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="降水预报"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toEndOf="@+id/ivRainIcon"
+                    app:layout_constraintTop_toTopOf="@+id/ivRainIcon" />
+
+                <!-- 降水状态描述 -->
+                <TextView
+                    android:id="@+id/tvRainForecast"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="未来两小时内无降水"
+                    android:textColor="#DDFFFFFF"
+                    android:textSize="12sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="@+id/tvRainTitle"
+                    app:layout_constraintTop_toBottomOf="@+id/tvRainTitle" />
+
+                <!-- 降水状态进度条 - 仅在有降水预报时显示 -->
+                <ProgressBar
+                    android:id="@+id/progressRain"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:max="120"
+                    android:progress="25"
+                    android:progressTint="#4FC3F7"
+                    android:visibility="gone"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="@+id/tvRainForecast"
+                    app:layout_constraintTop_toBottomOf="@+id/tvRainForecast" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- 天气预报卡片 -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/forecastCard"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginBottom="4dp"
-            android:maxHeight="120dp"
-            android:clipToPadding="false"
-            android:orientation="vertical"
-            android:background="@android:color/transparent"
-            app:layout_constraintTop_toBottomOf="@+id/forecastTitleLayout"
+            android:layout_height="0dp"
+            android:layout_marginStart="0dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginEnd="0dp"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="#33FFFFFF"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            app:layout_constraintTop_toBottomOf="@+id/rainForecastView"
             app:layout_constraintBottom_toTopOf="@+id/tvSwipeHint"
-            app:layout_constraintVertical_bias="0.0"
-            app:layout_constraintVertical_chainStyle="packed" />
+            app:layout_constraintVertical_weight="1">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:paddingStart="16dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="6dp">
+
+                <!-- 天气预报标题 -->
+                <LinearLayout
+                    android:id="@+id/forecastTitleLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    app:layout_constraintTop_toTopOf="parent">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="未来天气"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- 3天天气预报列表 - 垂直布局 -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvForecast"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="2dp"
+                    android:clipToPadding="false"
+                    android:orientation="vertical"
+                    android:background="@android:color/transparent"
+                    app:layout_constraintTop_toBottomOf="@+id/forecastTitleLayout"
+                    app:layout_constraintBottom_toTopOf="@+id/btnViewMore"
+                    app:layout_constraintVertical_weight="1" />
+
+                <!-- 查看更多天气预报按钮 -->
+                <Button
+                    android:id="@+id/btnViewMore"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:layout_marginTop="2dp"
+                    android:background="@drawable/view_more_button_bg"
+                    android:text="查看15天预报"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    app:layout_constraintTop_toBottomOf="@+id/rvForecast"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.cardview.widget.CardView>
 
         <!-- 提示用户可以上拉查看待办事项 -->
         <TextView
             android:id="@+id/tvSwipeHint"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="12dp"
             android:drawableBottom="@android:drawable/arrow_up_float"
-            android:drawablePadding="4dp"
+            android:drawablePadding="2dp"
             android:text="上滑查看待办事项"
             android:textColor="#DDFFFFFF"
-            android:textSize="14sp"
+            android:textSize="12sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
@@ -187,7 +287,7 @@
         android:background="@drawable/rounded_white_bg"
         android:orientation="vertical"
         app:behavior_hideable="false"
-        app:behavior_peekHeight="80dp"
+        app:behavior_peekHeight="70dp"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
 
         <!-- 拖动把手 -->
@@ -196,21 +296,21 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:orientation="vertical"
-            android:paddingTop="12dp"
-            android:paddingBottom="8dp">
+            android:paddingTop="10dp"
+            android:paddingBottom="6dp">
 
             <View
-                android:layout_width="40dp"
-                android:layout_height="4dp"
+                android:layout_width="36dp"
+                android:layout_height="3dp"
                 android:background="#BDBDBD"
-                android:layout_marginBottom="12dp" />
+                android:layout_marginBottom="8dp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="待办事项"
                 android:textColor="#212121"
-                android:textSize="18sp"
+                android:textSize="16sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -218,10 +318,10 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginBottom="8dp"
+            android:layout_marginStart="14dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginEnd="14dp"
+            android:layout_marginBottom="6dp"
             android:background="@drawable/rounded_button_bg"
             android:elevation="2dp">
 
@@ -231,13 +331,13 @@
                 android:layout_height="wrap_content"
                 android:background="?android:attr/selectableItemBackground"
                 android:drawableStart="@android:drawable/ic_menu_add"
-                android:drawablePadding="8dp"
+                android:drawablePadding="6dp"
                 android:drawableTint="#FFFFFF"
                 android:gravity="center"
-                android:padding="12dp"
+                android:padding="10dp"
                 android:text="添加新待办事项"
                 android:textColor="#FFFFFF"
-                android:textSize="16sp" />
+                android:textSize="14sp" />
         </LinearLayout>
 
         <!-- 内容区域 -->

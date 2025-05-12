@@ -4,9 +4,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="4dp"
-    app:cardCornerRadius="10dp"
-    app:cardElevation="1dp"
+    android:layout_margin="2dp"
+    app:cardCornerRadius="6dp"
+    app:cardElevation="0.5dp"
     app:cardBackgroundColor="#FFFFFF">
 
     <LinearLayout
@@ -14,35 +14,36 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:padding="8dp">
+        android:padding="6dp"
+        android:minHeight="36dp">
 
         <!-- 日期 -->
         <TextView
             android:id="@+id/tvForecastDate"
-            android:layout_width="52dp"
+            android:layout_width="40dp"
             android:layout_height="wrap_content"
             android:text="今天"
             android:textColor="#333333"
-            android:textSize="15sp"
+            android:textSize="12sp"
             android:textStyle="bold" />
 
         <!-- 天气图标 -->
         <ImageView
             android:id="@+id/ivWeatherIcon"
-            android:layout_width="26dp"
-            android:layout_height="26dp"
-            android:layout_marginStart="4dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="2dp"
             android:src="@drawable/ic_sunny" />
 
         <!-- 天气描述 -->
         <TextView
             android:id="@+id/tvWeatherDesc"
-            android:layout_width="42dp"
+            android:layout_width="32dp"
             android:layout_height="wrap_content"
             android:text="晴"
-            android:layout_marginStart="4dp"
+            android:layout_marginStart="2dp"
             android:textColor="#333333"
-            android:textSize="14sp" />
+            android:textSize="12sp" />
 
         <!-- 温度条布局 -->
         <LinearLayout
@@ -59,14 +60,15 @@
                 android:layout_height="wrap_content"
                 android:text="17°"
                 android:textColor="#2196F3"
-                android:textSize="14sp" />
+                android:textSize="13sp" />
 
             <!-- 温度条容器 -->
             <FrameLayout
-                android:layout_width="80dp"
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:layout_marginEnd="6dp">
+                android:layout_marginStart="3dp"
+                android:layout_marginEnd="3dp">
 
                 <!-- 温度条背景 -->
                 <View
@@ -91,7 +93,7 @@
                 android:layout_height="wrap_content"
                 android:text="31°"
                 android:textColor="#FF5722"
-                android:textSize="14sp" />
+                android:textSize="13sp" />
         </LinearLayout>
 
     </LinearLayout>

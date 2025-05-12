@@ -11,11 +11,14 @@ import com.qweather.sdk.basic.Unit;
 import com.qweather.sdk.parameter.air.AirParameter;
 import com.qweather.sdk.parameter.geo.GeoCityLookupParameter;
 import com.qweather.sdk.parameter.weather.WeatherParameter;
+import com.qweather.sdk.parameter.minutely.MinutelyParameter;
 import com.qweather.sdk.response.air.AirNowResponse;
 import com.qweather.sdk.response.error.ErrorResponse;
 import com.qweather.sdk.response.geo.GeoCityLookupResponse;
 import com.qweather.sdk.response.weather.WeatherDailyResponse;
 import com.qweather.sdk.response.weather.WeatherNowResponse;
+import com.qweather.sdk.response.weather.WeatherHourlyResponse;
+import com.qweather.sdk.response.minutely.MinutelyResponse;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -566,6 +569,106 @@ public class WeatherService
         catch (Exception e) 
         {
             String error = "发送天气预报请求异常: " + e.getMessage();
+            Log.e(TAG, error, e);
+            callback.onError(error);
+        }
+    }
+
+    /**
+     * 获取两小时内分钟级降水预报
+     * 
+     * @param latitude 纬度
+     * @param longitude 经度
+     * @param callback 回调接口
+     */
+    public void getMinutelyRainForecast(double latitude, double longitude, final WeatherCallback<MinutelyRainInfo> callback) 
+    {
+        if (!checkInitialized(callback)) return;
+        
+        try 
+        {
+            Log.d(TAG, "获取位置(" + latitude + "," + longitude + ")的分钟级降水预报");
+            
+            // 创建分钟级降水预报查询参数 - 直接传入经度和纬度
+            MinutelyParameter parameter = new MinutelyParameter(longitude, latitude);
+            
+            // 调用API
+            qWeather.minutely(parameter, new Callback<MinutelyResponse>() 
+            {
+                @Override
+                public void onSuccess(MinutelyResponse response) 
+                {
+                    Log.d(TAG, "获取分钟级降水预报成功: " + response.toString());
+                    
+                    // 创建返回数据
+                    MinutelyRainInfo rainInfo = new MinutelyRainInfo();
+                    
+                    if (STATUS_OK.equals(response.getCode())) 
+                    {
+                        try 
+                        {
+                            // 基本信息
+                            rainInfo.code = response.getCode();
+                            rainInfo.updateTime = response.getUpdateTime();
+                            rainInfo.fxLink = response.getFxLink();
+                            rainInfo.summary = response.getSummary();
+                            
+                            // 获取分钟级降水数据
+                            if (response.getMinutely() != null && !response.getMinutely().isEmpty()) 
+                            {
+                                List<?> minutelyList = response.getMinutely();
+                                
+                                for (Object minutely : minutelyList) 
+                                {
+                                    MinutelyRainInfo.MinutelyData data = new MinutelyRainInfo.MinutelyData();
+                                    
+                                    // 获取各个字段
+                                    data.fxTime = getStringProperty(minutely, "getFxTime");
+                                    data.precip = getStringProperty(minutely, "getPrecip");
+                                    data.type = getStringProperty(minutely, "getType");
+                                    
+                                    // 添加到预报列表
+                                    rainInfo.addMinutelyData(data);
+                                }
+                            }
+                            
+                            Log.d(TAG, "解析分钟级降水预报成功: " + rainInfo.minutelyList.size() + "个数据点");
+                            Log.d(TAG, "降水预报摘要: " + rainInfo.summary);
+                        } 
+                        catch (Exception e) 
+                        {
+                            Log.e(TAG, "解析分钟级降水预报失败", e);
+                            rainInfo.error = "解析分钟级降水预报失败: " + e.getMessage();
+                        }
+                    } 
+                    else 
+                    {
+                        rainInfo.error = "API返回错误: " + response.getCode();
+                    }
+                    
+                    callback.onSuccess(rainInfo);
+                }
+
+                @Override
+                public void onFailure(ErrorResponse errorResponse) 
+                {
+                    String error = "获取分钟级降水预报失败: " + errorResponse.toString();
+                    Log.e(TAG, error);
+                    callback.onError(error);
+                }
+
+                @Override
+                public void onException(Throwable e) 
+                {
+                    String error = "获取分钟级降水预报异常: " + e.getMessage();
+                    Log.e(TAG, error, e);
+                    callback.onError(error);
+                }
+            });
+        } 
+        catch (Exception e) 
+        {
+            String error = "发送分钟级降水预报请求异常: " + e.getMessage();
             Log.e(TAG, error, e);
             callback.onError(error);
         }

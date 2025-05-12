@@ -12,6 +12,7 @@
     <color name="primary">#3F51B5</color>
     <color name="primary_dark">#303F9F</color>
     <color name="accent">#FF4081</color>
+    <color name="colorAccentLight">#80A5D6</color>
     <color name="selected_bg">#3F51B5</color>
     <color name="unselected_bg">#FFFFFF</color>
     <color name="text_primary">#212121</color>

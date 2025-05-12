@@ -13,7 +13,9 @@ import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -32,6 +34,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.weather.adapter.ForecastAdapter;
 import com.example.weather.api.AirQualityInfo;
 import com.example.weather.api.CityInfo;
+import com.example.weather.api.MinutelyRainInfo;
 import com.example.weather.api.WeatherCallback;
 import com.example.weather.api.WeatherForecastInfo;
 import com.example.weather.api.WeatherInfo;
@@ -54,6 +57,7 @@ public class MainActivity extends AppCompatActivity
     // 定时更新相关常量
     private static final long WEATHER_UPDATE_INTERVAL = 30 * 60 * 1000; // 30分钟更新一次天气
     private static final long AIR_QUALITY_UPDATE_INTERVAL = 60 * 60 * 1000; // 1小时更新一次空气质量
+    private static final long RAIN_FORECAST_UPDATE_INTERVAL = 10 * 60 * 1000; // 10分钟更新一次降水预报
     
     // UI 组件
     private TextView tvCityName;
@@ -93,10 +97,12 @@ public class MainActivity extends AppCompatActivity
     // 定时器处理器
     private Handler weatherUpdateHandler;
     private Handler airQualityUpdateHandler;
+    private Handler rainForecastUpdateHandler;
     
     // 更新任务
     private Runnable weatherUpdateRunnable;
     private Runnable airQualityUpdateRunnable;
+    private Runnable rainForecastUpdateRunnable;
 
     // 天气背景映射
     private Map<String, Integer> weatherBackgrounds;
@@ -106,6 +112,13 @@ public class MainActivity extends AppCompatActivity
     
     // 天气预报数据
     private WeatherForecastInfo weatherForecastInfo;
+
+    // 雨水预报UI组件
+    private View rainForecastView;
+    private ImageView ivRainIcon;
+    private TextView tvRainTitle;
+    private TextView tvRainForecast;
+    private ProgressBar progressRain;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) 
@@ -239,38 +252,51 @@ public class MainActivity extends AppCompatActivity
     {
         weatherUpdateHandler = new Handler(Looper.getMainLooper());
         airQualityUpdateHandler = new Handler(Looper.getMainLooper());
+        rainForecastUpdateHandler = new Handler(Looper.getMainLooper());
         
-        // 定义天气更新任务
+        // 天气更新任务
         weatherUpdateRunnable = new Runnable() 
         {
             @Override
             public void run() 
             {
-                if (!currentCityId.isEmpty()) 
+                Log.d(TAG, "执行天气定时更新");
+                if (currentCityId != null && !currentCityId.isEmpty()) 
                 {
-                    Log.d(TAG, "执行定时天气更新");
                     getWeatherInfo(currentCityId);
+                    getWeatherForecast(currentCityId);
                 }
-                
-                // 安排下一次更新
                 weatherUpdateHandler.postDelayed(this, WEATHER_UPDATE_INTERVAL);
             }
         };
         
-        // 定义空气质量更新任务
+        // 空气质量更新任务
         airQualityUpdateRunnable = new Runnable() 
         {
             @Override
             public void run() 
             {
+                Log.d(TAG, "执行空气质量定时更新");
                 if (latitude != 0 && longitude != 0) 
                 {
-                    Log.d(TAG, "执行定时空气质量更新");
                     getAirQualityInfo(latitude, longitude);
                 }
-                
-                // 安排下一次更新
                 airQualityUpdateHandler.postDelayed(this, AIR_QUALITY_UPDATE_INTERVAL);
+            }
+        };
+        
+        // 降水预报更新任务
+        rainForecastUpdateRunnable = new Runnable() 
+        {
+            @Override
+            public void run() 
+            {
+                Log.d(TAG, "执行降水预报定时更新");
+                if (latitude != 0 && longitude != 0) 
+                {
+                    getRainForecast(latitude, longitude);
+                }
+                rainForecastUpdateHandler.postDelayed(this, RAIN_FORECAST_UPDATE_INTERVAL);
             }
         };
     }
@@ -280,14 +306,15 @@ public class MainActivity extends AppCompatActivity
      */
     private void startPeriodicUpdates() 
     {
-        // 取消任何现有的更新任务
+        // 停止可能已存在的更新
         stopPeriodicUpdates();
         
-        // 安排更新任务
+        // 启动新的定时更新
         weatherUpdateHandler.postDelayed(weatherUpdateRunnable, WEATHER_UPDATE_INTERVAL);
         airQualityUpdateHandler.postDelayed(airQualityUpdateRunnable, AIR_QUALITY_UPDATE_INTERVAL);
+        rainForecastUpdateHandler.postDelayed(rainForecastUpdateRunnable, RAIN_FORECAST_UPDATE_INTERVAL);
         
-        Log.d(TAG, "已启动定时天气更新");
+        Log.d(TAG, "已启动定时更新任务");
     }
     
     /**
@@ -297,8 +324,9 @@ public class MainActivity extends AppCompatActivity
     {
         weatherUpdateHandler.removeCallbacks(weatherUpdateRunnable);
         airQualityUpdateHandler.removeCallbacks(airQualityUpdateRunnable);
+        rainForecastUpdateHandler.removeCallbacks(rainForecastUpdateRunnable);
         
-        Log.d(TAG, "已停止定时天气更新");
+        Log.d(TAG, "已停止定时更新任务");
     }
     
     @Override
@@ -371,26 +399,6 @@ public class MainActivity extends AppCompatActivity
         // 显示正在定位
         tvCityName.setText("正在获取位置...");
         
-        // 定义位置监听器
-        LocationListener locationListener = new LocationListener() 
-        {
-            @Override
-            public void onLocationChanged(@NonNull Location location) 
-            {
-                // 获取经纬度
-                latitude = location.getLatitude();
-                longitude = location.getLongitude();
-                
-                Log.d(TAG, "获取到位置 - 纬度: " + latitude + ", 经度: " + longitude);
-                
-                // 获取城市信息
-                getCityInfo(latitude, longitude);
-                
-                // 停止位置更新
-                locationManager.removeUpdates(this);
-            }
-        };
-        
         // 检查哪些位置提供者可用
         boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         boolean isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
@@ -415,6 +423,12 @@ public class MainActivity extends AppCompatActivity
                 
                 // 获取城市信息
                 getCityInfo(latitude, longitude);
+                
+                // 获取空气质量
+                getAirQualityInfo(latitude, longitude);
+                
+                // 获取降水预报
+                getRainForecast(latitude, longitude);
             }
         }
         
@@ -438,6 +452,12 @@ public class MainActivity extends AppCompatActivity
                 
                 // 获取城市信息
                 getCityInfo(latitude, longitude);
+                
+                // 获取空气质量
+                getAirQualityInfo(latitude, longitude);
+                
+                // 获取降水预报
+                getRainForecast(latitude, longitude);
             }
         }
         else 
@@ -487,6 +507,9 @@ public class MainActivity extends AppCompatActivity
                         
                         // 获取空气质量信息
                         getAirQualityInfo(latitude, longitude);
+                        
+                        // 获取降水预报
+                        getRainForecast(latitude, longitude);
                         
                         // 获取到位置和城市信息后，启动定时更新
                         startPeriodicUpdates();
@@ -822,14 +845,18 @@ public class MainActivity extends AppCompatActivity
         bottomSheetLayout = findViewById(R.id.bottomSheetLayout);
         mainLayout = findViewById(R.id.main);
         
-        // 设置UI默认值，仅作展示
-        tvCityName.setText("正在获取位置...");
-        tvWeatherType.setText("晴");
-        tvTemperature.setText("26°");
-        tvTemperatureRange.setText("24° / 31°");
-        tvWeatherDescription.setText("今日天气舒适，适合外出活动");
-        tvAirQuality.setText("空气优 19");
-        tvCurrentWeatherBadge.setText("晴天");
+        // 初始化降水预报UI组件
+        rainForecastView = findViewById(R.id.rainForecastView);
+        if (rainForecastView != null) 
+        {
+            ivRainIcon = rainForecastView.findViewById(R.id.ivRainIcon);
+            tvRainTitle = rainForecastView.findViewById(R.id.tvRainTitle);
+            tvRainForecast = rainForecastView.findViewById(R.id.tvRainForecast);
+            progressRain = rainForecastView.findViewById(R.id.progressRain);
+            
+            // 默认隐藏降水预报视图，直到获取到数据
+            rainForecastView.setVisibility(View.GONE);
+        }
     }
     
     /**
@@ -976,5 +1003,126 @@ public class MainActivity extends AppCompatActivity
             rvForecast.setVisibility(View.GONE);
             Log.d(TAG, "无天气预报数据可显示");
         }
+    }
+
+    /**
+     * 获取当前位置的分钟级降水预报
+     */
+    private void getRainForecast(double latitude, double longitude) 
+    {
+        Log.d(TAG, "获取降水预报 - 经度: " + longitude + ", 纬度: " + latitude);
+        
+        WeatherService.getInstance(this).getMinutelyRainForecast(latitude, longitude, 
+            new WeatherCallback<MinutelyRainInfo>() 
+            {
+                @Override
+                public void onSuccess(MinutelyRainInfo rainInfo) 
+                {
+                    if (rainInfo != null) 
+                    {
+                        Log.d(TAG, "获取降水预报成功: " + rainInfo.summary);
+                        runOnUiThread(() -> {
+                            updateRainForecastUI(rainInfo);
+                        });
+                    }
+                }
+
+                @Override
+                public void onError(String message) 
+                {
+                    Log.e(TAG, "获取降水预报失败: " + message);
+                    runOnUiThread(() -> {
+                        showToast("获取降水预报失败: " + message);
+                        
+                        // 隐藏降水预报视图
+                        if (rainForecastView != null) 
+                        {
+                            rainForecastView.setVisibility(View.GONE);
+                        }
+                    });
+                }
+            });
+    }
+    
+    /**
+     * 更新降水预报UI
+     */
+    private void updateRainForecastUI(MinutelyRainInfo rainInfo) 
+    {
+        if (rainForecastView == null || rainInfo == null) return;
+        
+        // 显示降水预报视图
+        rainForecastView.setVisibility(View.VISIBLE);
+        
+        // 更新降水预报文本
+        tvRainForecast.setText(rainInfo.getRainForecastDescription());
+        
+        // 设置图标和进度条
+        if (rainInfo.willRainIn2Hours()) 
+        {
+            // 有降水预报，显示雨滴图标和进度条
+            ivRainIcon.setImageResource(R.drawable.ic_rain);
+            tvRainTitle.setText("即将降水");
+            
+            // 显示进度条
+            progressRain.setVisibility(View.VISIBLE);
+            int timeToRain = rainInfo.getTimeToRain();
+            
+            if (timeToRain >= 0) 
+            {
+                // 设置进度（剩余分钟数）最大值为120分钟
+                progressRain.setProgress(timeToRain);
+            }
+        } 
+        else 
+        {
+            // 无降水预报，显示晴天图标
+            ivRainIcon.setImageResource(R.drawable.ic_rain);
+            ivRainIcon.setColorFilter(getResources().getColor(R.color.colorAccentLight));
+            tvRainTitle.setText("未来无降水");
+            
+            // 隐藏进度条
+            progressRain.setVisibility(View.GONE);
+        }
+    }
+
+    /**
+     * 处理位置更新事件
+     */
+    private final LocationListener locationListener = new LocationListener() 
+    {
+        @Override
+        public void onLocationChanged(@NonNull Location location) 
+        {
+            Log.d(TAG, "位置已更新 - 经度: " + location.getLongitude() + ", 纬度: " + location.getLatitude());
+            
+            latitude = location.getLatitude();
+            longitude = location.getLongitude();
+            
+            // 停止位置更新以节省电量
+            if (locationManager != null) 
+            {
+                locationManager.removeUpdates(this);
+            }
+            
+            // 获取城市信息
+            getCityInfo(latitude, longitude);
+            
+            // 获取空气质量
+            getAirQualityInfo(latitude, longitude);
+            
+            // 获取降水预报
+            getRainForecast(latitude, longitude);
+        }
+        
+        // ... other LocationListener methods ...
+    };
+
+    /**
+     * 显示Toast消息
+     */
+    private void showToast(String message) 
+    {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 }
