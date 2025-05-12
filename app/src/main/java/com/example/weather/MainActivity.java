@@ -12,7 +12,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -67,18 +66,8 @@ public class MainActivity extends AppCompatActivity
     private TextView tvWeatherDescription;
     private TextView tvUpdateTime;
     private TextView tvAirQuality;
-    private TextView tvCurrentWeatherBadge;
-    private TextView tvNoWeatherTodos;
-    private TextView tvNoAllTodos;
-    private RecyclerView rvAllTodos;
-    private RecyclerView rvWeatherTodos;
     private RecyclerView rvForecast;
-    private Button btnAddTodo;
-    private LinearLayout bottomSheetLayout;
     private CoordinatorLayout mainLayout;
-    
-    // 底部滑动行为
-    private BottomSheetBehavior<LinearLayout> bottomSheetBehavior;
     
     // 数据
     private String currentWeatherType = "晴";
@@ -145,15 +134,6 @@ public class MainActivity extends AppCompatActivity
         
         // 设置当前时间（更新时间）
         updateCurrentTime();
-        
-        // 设置空UI状态
-        setupEmptyState();
-        
-        // 初始化底部滑动面板
-        setupBottomSheet();
-        
-        // 设置按钮点击事件
-        setupClickListeners();
         
         // 初始化定时更新
         initPeriodicUpdates();
@@ -636,9 +616,6 @@ public class MainActivity extends AppCompatActivity
         // 更新温度
         tvTemperature.setText(weatherInfo.getTemperature());
         
-        // 更新天气状况标签
-        tvCurrentWeatherBadge.setText(weatherInfo.text);
-        
         // 更新更新时间
         SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm+08:00", Locale.getDefault());
         SimpleDateFormat outputFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
@@ -762,59 +739,6 @@ public class MainActivity extends AppCompatActivity
     }
     
     /**
-     * 设置点击事件
-     */
-    private void setupClickListeners() 
-    {
-        btnAddTodo.setOnClickListener(v -> 
-        {
-            // 暂时显示简单的提示，待办事项功能尚未实现
-            Toast.makeText(this, "待办事项功能开发中", Toast.LENGTH_SHORT).show();
-        });
-    }
-    
-    /**
-     * 设置空状态UI
-     */
-    private void setupEmptyState() 
-    {
-        // 显示空状态提示
-        updateEmptyStateVisibility(true, true);
-        
-        // 初始化RecyclerView，但不设置适配器
-        rvWeatherTodos.setLayoutManager(new LinearLayoutManager(this));
-        rvAllTodos.setLayoutManager(new LinearLayoutManager(this));
-    }
-    
-    /**
-     * 更新空状态的可见性
-     */
-    private void updateEmptyStateVisibility(boolean weatherTodosEmpty, boolean allTodosEmpty) 
-    {
-        if (weatherTodosEmpty) 
-        {
-            tvNoWeatherTodos.setVisibility(View.VISIBLE);
-            rvWeatherTodos.setVisibility(View.GONE);
-        } 
-        else 
-        {
-            tvNoWeatherTodos.setVisibility(View.GONE);
-            rvWeatherTodos.setVisibility(View.VISIBLE);
-        }
-        
-        if (allTodosEmpty) 
-        {
-            tvNoAllTodos.setVisibility(View.VISIBLE);
-            rvAllTodos.setVisibility(View.GONE);
-        } 
-        else 
-        {
-            tvNoAllTodos.setVisibility(View.GONE);
-            rvAllTodos.setVisibility(View.VISIBLE);
-        }
-    }
-    
-    /**
      * 初始化UI组件
      */
     private void initUI() 
@@ -826,14 +750,7 @@ public class MainActivity extends AppCompatActivity
         tvWeatherDescription = findViewById(R.id.tvWeatherDescription);
         tvUpdateTime = findViewById(R.id.tvUpdateTime);
         tvAirQuality = findViewById(R.id.tvAirQuality);
-        tvCurrentWeatherBadge = findViewById(R.id.tvCurrentWeatherBadge);
-        tvNoWeatherTodos = findViewById(R.id.tvNoWeatherTodos);
-        tvNoAllTodos = findViewById(R.id.tvNoAllTodos);
-        rvAllTodos = findViewById(R.id.rvAllTodos);
-        rvWeatherTodos = findViewById(R.id.rvWeatherTodos);
         rvForecast = findViewById(R.id.rvForecast);
-        btnAddTodo = findViewById(R.id.btnAddTodo);
-        bottomSheetLayout = findViewById(R.id.bottomSheetLayout);
         mainLayout = findViewById(R.id.main);
         
         // 初始化降水预报UI组件
@@ -848,59 +765,6 @@ public class MainActivity extends AppCompatActivity
             // 默认隐藏降水预报视图，直到获取到数据
             rainForecastView.setVisibility(View.GONE);
         }
-    }
-    
-    /**
-     * 设置底部滑动面板
-     */
-    private void setupBottomSheet() 
-    {
-        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheetLayout);
-        
-        // 获取上滑提示布局
-        View swipeUpHintLayout = findViewById(R.id.swipeUpHintLayout);
-        
-        // 设置回调
-        bottomSheetBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() 
-        {
-            private boolean hasBeenExpanded = false;
-            
-            @Override
-            public void onStateChanged(@NonNull View bottomSheet, int newState) 
-            {
-                // 检测抽屉是否被展开过
-                if (newState == BottomSheetBehavior.STATE_EXPANDED || 
-                    newState == BottomSheetBehavior.STATE_HALF_EXPANDED) {
-                    
-                    // 隐藏上滑提示
-                    if (swipeUpHintLayout != null && !hasBeenExpanded) {
-                        swipeUpHintLayout.animate()
-                            .alpha(0f)
-                            .setDuration(200)
-                            .withEndAction(() -> swipeUpHintLayout.setVisibility(View.GONE))
-                            .start();
-                        hasBeenExpanded = true;
-                    }
-                }
-            }
-
-            @Override
-            public void onSlide(@NonNull View bottomSheet, float slideOffset) 
-            {
-                // 根据滑动进度调整上滑提示的透明度
-                if (swipeUpHintLayout != null && !hasBeenExpanded) {
-                    // slideOffset范围从0到1，根据滑动进度逐渐隐藏提示
-                    if (slideOffset > 0.1f) {
-                        float alpha = Math.max(0f, 1f - ((slideOffset - 0.1f) / 0.3f));
-                        swipeUpHintLayout.setAlpha(alpha);
-                    }
-                }
-            }
-        });
-        
-        // 保持原有的peekHeight设置
-        int peekHeightInPixels = (int) (getResources().getDisplayMetrics().density * 35);
-        bottomSheetBehavior.setPeekHeight(peekHeightInPixels);
     }
     
     /**
