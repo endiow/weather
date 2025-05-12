@@ -3,9 +3,16 @@ package com.example.weather;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.app.TimePickerDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -34,10 +41,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.weather.adapter.TodoAdapter;
 import com.example.weather.model.Todo;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 
+import java.io.IOException;
+import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -82,7 +89,7 @@ public class MainActivity extends AppCompatActivity implements TodoAdapter.OnTod
     private String currentTime;
     
     // 位置服务
-    private FusedLocationProviderClient fusedLocationClient;
+    private LocationManager locationManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,7 +119,7 @@ public class MainActivity extends AppCompatActivity implements TodoAdapter.OnTod
         setupBottomSheet();
         
         // 初始化位置服务
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         
         // 请求位置权限
         requestLocationPermission();
@@ -276,58 +283,486 @@ public class MainActivity extends AppCompatActivity implements TodoAdapter.OnTod
     /**
      * 请求位置权限
      */
-    private void requestLocationPermission() {
+    private void requestLocationPermission() 
+    {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
                     LOCATION_PERMISSION_REQUEST_CODE);
         } else {
-            getLastLocation();
+            getLocationByAndroidProvider();
+        }
+    }
+
+    /**
+     * 使用Android原生位置服务获取城市定位
+     */
+    private void getLocationByAndroidProvider() 
+    {
+        if (ActivityCompat.checkSelfPermission(this, 
+                Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Log.e(TAG, "位置权限未授予，使用备用方法");
+            useBackupLocationMethod();
+            return;
+        }
+        
+        // 记录开始获取位置的时间
+        long startTime = System.currentTimeMillis();
+        Log.d(TAG, "开始获取位置信息...");
+        
+        // 尝试先使用网络定位，更节省电量
+        boolean isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        
+        Log.d(TAG, "位置提供者状态 - 网络: " + isNetworkEnabled + ", GPS: " + isGPSEnabled);
+        
+        if (!isNetworkEnabled && !isGPSEnabled) 
+        {
+            // 所有定位方式都未开启
+            Log.e(TAG, "所有位置提供者都未开启");
+            Toast.makeText(this, "请开启定位服务", Toast.LENGTH_SHORT).show();
+            useBackupLocationMethod();
+            return;
+        }
+        
+        // 设置定位监听器
+        LocationListener locationListener = new LocationListener() 
+        {
+            @Override
+            public void onLocationChanged(@NonNull Location location) 
+            {
+                // 计算获取位置所需时间
+                long timeUsed = System.currentTimeMillis() - startTime;
+                Log.d(TAG, "位置已更新 - 提供者: " + location.getProvider() 
+                        + ", 纬度: " + location.getLatitude() 
+                        + ", 经度: " + location.getLongitude()
+                        + ", 精度: " + location.getAccuracy() + "米"
+                        + ", 用时: " + timeUsed + "ms");
+                
+                // 获取位置成功，解析城市名
+                getCityNameFromLocation(location.getLatitude(), location.getLongitude());
+                // 移除监听器，不再接收位置更新
+                locationManager.removeUpdates(this);
+            }
+
+            @Override
+            public void onProviderDisabled(@NonNull String provider) 
+            {
+                Log.w(TAG, "位置提供者已禁用: " + provider);
+                // 位置提供者被禁用
+                if (!locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+                        && !locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                    Log.e(TAG, "所有位置提供者都被禁用，使用备用方法");
+                    useBackupLocationMethod();
+                }
+            }
+
+            @Override
+            public void onProviderEnabled(@NonNull String provider) 
+            {
+                Log.d(TAG, "位置提供者已启用: " + provider);
+                // 位置提供者被启用
+            }
+        };
+        
+        try 
+        {
+            // 先尝试使用网络定位
+            if (isNetworkEnabled) 
+            {
+                Log.d(TAG, "请求网络位置更新");
+                locationManager.requestLocationUpdates(
+                        LocationManager.NETWORK_PROVIDER,
+                        0, 0, locationListener);
+                
+                Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                if (lastKnownLocation != null) 
+                {
+                    Log.d(TAG, "使用最后已知网络位置 - 纬度: " + lastKnownLocation.getLatitude() 
+                            + ", 经度: " + lastKnownLocation.getLongitude()
+                            + ", 精度: " + lastKnownLocation.getAccuracy() + "米"
+                            + ", 时间: " + new java.util.Date(lastKnownLocation.getTime()));
+                    
+                    // 使用最后已知位置
+                    getCityNameFromLocation(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
+                    locationManager.removeUpdates(locationListener);
+                    return;
+                } else {
+                    Log.d(TAG, "无最后已知网络位置");
+                }
+            }
+            
+            // 如果网络定位失败或无最后已知位置，尝试GPS定位
+            if (isGPSEnabled) 
+            {
+                Log.d(TAG, "请求GPS位置更新");
+                locationManager.requestLocationUpdates(
+                        LocationManager.GPS_PROVIDER,
+                        0, 0, locationListener);
+                
+                Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                if (lastKnownLocation != null) 
+                {
+                    Log.d(TAG, "使用最后已知GPS位置 - 纬度: " + lastKnownLocation.getLatitude() 
+                            + ", 经度: " + lastKnownLocation.getLongitude()
+                            + ", 精度: " + lastKnownLocation.getAccuracy() + "米"
+                            + ", 时间: " + new java.util.Date(lastKnownLocation.getTime()));
+                    
+                    // 使用最后已知位置
+                    getCityNameFromLocation(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
+                    locationManager.removeUpdates(locationListener);
+                    return;
+                } else {
+                    Log.d(TAG, "无最后已知GPS位置");
+                }
+            }
+            
+            // 设置超时处理
+            new Handler().postDelayed(() -> 
+            {
+                // 30秒后检查是否已获取位置
+                if (tvCityName.getText().toString().equals("正在定位...") 
+                        || tvCityName.getText().toString().isEmpty()) 
+                {
+                    Log.e(TAG, "位置获取超时（30秒），使用备用方法");
+                    locationManager.removeUpdates(locationListener);
+                    useBackupLocationMethod();
+                }
+            }, 30000); // 30秒超时
+            
+        } 
+        catch (Exception e) 
+        {
+            Log.e(TAG, "获取位置失败: " + e.getMessage(), e);
+            useBackupLocationMethod();
+        }
+    }
+
+    /**
+     * 使用经纬度获取城市信息
+     */
+    private void getCityNameFromLocation(double latitude, double longitude) 
+    {
+        Log.d(TAG, "使用和风天气API获取城市信息 - 纬度: " + latitude + ", 经度: " + longitude);
+        
+        // 构建位置字符串（格式：经度,纬度）
+        String location = String.format(Locale.US, "%.2f,%.2f", longitude, latitude);
+        Log.d(TAG, "位置参数: " + location);
+        
+        // 获取WeatherService实例
+        com.example.weather.api.WeatherService weatherService = com.example.weather.api.WeatherService.getInstance(this);
+        
+        // 调用和风天气API获取城市信息
+        weatherService.getCityName(location, new com.example.weather.api.WeatherService.WeatherCallback<com.qweather.sdk.response.geo.GeoCityLookupResponse>() 
+        {
+            @Override
+            public void onSuccess(com.qweather.sdk.response.geo.GeoCityLookupResponse response) 
+            {
+                Log.d(TAG, "获取城市信息成功: " + response.toString());
+                
+                // 使用WeatherService解析城市信息
+                com.example.weather.api.WeatherService.CityInfo cityInfo = weatherService.parseCityInfo(response);
+                
+                if (!cityInfo.error) 
+                {
+                    // 解析成功，使用解析出的城市名称和坐标
+                    runOnUiThread(() -> 
+                    {
+                        tvCityName.setText(cityInfo.displayName);
+                        
+                        // 使用解析出的经纬度获取天气数据
+                        double cityLat = cityInfo.getLatitude(latitude);
+                        double cityLon = cityInfo.getLongitude(longitude);
+                        fetchWeatherData(cityLat, cityLon);
+                    });
+                } 
+                else 
+                {
+                    // 解析失败，使用原始坐标
+                    Log.w(TAG, "解析城市信息失败: " + cityInfo.errorMessage);
+                    runOnUiThread(() -> 
+                    {
+                        tvCityName.setText("当前位置");
+                        fetchWeatherData(latitude, longitude);
+                    });
+                }
+            }
+            
+            @Override
+            public void onError(String message) 
+            {
+                // API调用失败，使用原始坐标
+                Log.e(TAG, "获取城市信息失败: " + message);
+                runOnUiThread(() -> 
+                {
+                    tvCityName.setText("当前位置");
+                    fetchWeatherData(latitude, longitude);
+                });
+            }
+        });
+    }
+
+    // 从字符串中提取字段值
+    private String extractField(String source, String startStr, String endStr) {
+        try {
+            int startIndex = source.indexOf(startStr) + startStr.length();
+            if (startIndex < startStr.length()) return "";
+            
+            int endIndex = source.indexOf(endStr, startIndex);
+            if (endIndex < 0) endIndex = source.length();
+            
+            return source.substring(startIndex, endIndex).trim();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /**
+     * 当定位失败时的备用方法
+     */
+    private void useBackupLocationMethod() 
+    {
+        // 显示城市选择对话框
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("请选择城市");
+        builder.setMessage("我们无法获取您的位置信息。请选择一个城市：");
+        
+        final String[] cities = {"北京", "上海", "广州", "深圳", "杭州", "成都", "武汉", "重庆", "长沙"};
+        builder.setItems(cities, (dialog, which) -> {
+            String selectedCity = cities[which];
+            Toast.makeText(this, "已选择城市: " + selectedCity, Toast.LENGTH_SHORT).show();
+            
+            // 更新UI显示
+            tvCityName.setText(selectedCity);
+            
+            // 根据城市名称获取位置坐标（模拟）
+            double[] coordinates = getCityCoordinates(selectedCity);
+            fetchWeatherData(coordinates[0], coordinates[1]);
+        });
+        
+        builder.setNegativeButton("取消", (dialog, which) -> {
+            // 用户取消，使用默认值（北京）
+            tvCityName.setText("北京");
+            double[] coordinates = getCityCoordinates("北京");
+            fetchWeatherData(coordinates[0], coordinates[1]);
+        });
+        
+        builder.show();
+    }
+
+    /**
+     * 根据城市名称获取坐标（简化版，实际应用中可使用地理编码服务）
+     * @param cityName 城市名称
+     * @return 坐标数组[纬度, 经度]
+     */
+    private double[] getCityCoordinates(String cityName) 
+    {
+        // 简单的城市坐标映射（纬度,经度）
+        switch (cityName) 
+        {
+            case "北京":
+                return new double[]{39.9042, 116.4074};
+            case "上海":
+                return new double[]{31.2304, 121.4737};
+            case "广州":
+                return new double[]{23.1291, 113.2644};
+            case "深圳":
+                return new double[]{22.5431, 114.0579};
+            case "杭州":
+                return new double[]{30.2741, 120.1551};
+            case "成都":
+                return new double[]{30.5728, 104.0668};
+            case "武汉":
+                return new double[]{30.5928, 114.3055};
+            case "重庆":
+                return new double[]{29.5630, 106.5530};
+            case "长沙":
+                return new double[]{28.2278, 112.9388};
+            default:
+                // 默认返回北京坐标
+                return new double[]{39.9042, 116.4074};
         }
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) 
+    {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                getLastLocation();
-            } else {
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) 
+        {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) 
+            {
+                getLocationByAndroidProvider();
+            } 
+            else 
+            {
                 Toast.makeText(this, "需要位置权限来获取天气数据", Toast.LENGTH_SHORT).show();
+                useBackupLocationMethod();
             }
         }
     }
 
     /**
-     * 获取最后已知位置
-     */
-    private void getLastLocation() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-        
-        fusedLocationClient.getLastLocation()
-                .addOnSuccessListener(this, location -> {
-                    if (location != null) {
-                        // 获取到位置信息，请求天气数据
-                        fetchWeatherData(location.getLatitude(), location.getLongitude());
-                    } else {
-                        Toast.makeText(MainActivity.this, "无法获取当前位置", Toast.LENGTH_SHORT).show();
-                    }
-                });
-    }
-
-    /**
      * 获取天气数据
      */
-    private void fetchWeatherData(double latitude, double longitude) {
-        // TODO: 使用ViewModel获取天气数据
+    private void fetchWeatherData(double latitude, double longitude) 
+    {
         Log.d(TAG, "获取天气数据: 纬度=" + latitude + ", 经度=" + longitude);
         
-        // 模拟天气数据
-        simulateWeatherData();
+        // 构建位置字符串（格式：经度,纬度）
+        String location = longitude + "," + latitude;
+        
+        try 
+        {
+            // 获取WeatherService实例
+            com.example.weather.api.WeatherService weatherService = com.example.weather.api.WeatherService.getInstance(this);
+            
+            // 标记是否已获取天气数据
+            final boolean[] weatherDataObtained = {false};
+            
+            // 设置超时处理，如果10秒内没有获取到数据，则使用模拟数据
+            new Handler().postDelayed(() -> {
+                if (!weatherDataObtained[0]) {
+                    Log.w(TAG, "获取天气数据超时，使用模拟数据");
+                    simulateWeatherData();
+                }
+            }, 10000); // 10秒超时
+            
+            // 获取实时天气数据
+            weatherService.getWeatherNow(location, new com.example.weather.api.WeatherService.WeatherCallback<com.qweather.sdk.response.weather.WeatherNowResponse>() 
+            {
+                @Override
+                public void onSuccess(com.qweather.sdk.response.weather.WeatherNowResponse response) 
+                {
+                    weatherDataObtained[0] = true;
+                    
+                    try 
+                    {
+                        // 在UI线程中更新UI
+                        runOnUiThread(() -> {
+                            try 
+                            {
+                                // 更新天气类型
+                                String text = response.getNow().getText();
+                                currentWeatherType = convertWeatherText(text);
+                                tvWeatherType.setText(text);
+                                tvCurrentWeatherBadge.setText(currentWeatherType);
+                                
+                                // 更新温度
+                                String temp = response.getNow().getTemp() + "°";
+                                tvTemperature.setText(temp);
+                                
+                                // 更新时间
+                                updateCurrentTime();
+                                
+                                // 更新天气描述
+                                tvWeatherDescription.setText("当前天气" + text + "，风力" + response.getNow().getWindScale() + "级");
+                                
+                                // 更新匹配的待办事项
+                                updateWeatherMatchedTodos();
+                            } 
+                            catch (Exception e) 
+                            {
+                                Log.e(TAG, "更新天气UI失败", e);
+                                simulateWeatherData();
+                            }
+                        });
+                        
+                        // 获取三日天气预报
+                        getWeatherForecast(location);
+                    } 
+                    catch (Exception e) 
+                    {
+                        Log.e(TAG, "处理实时天气数据失败", e);
+                        runOnUiThread(() -> simulateWeatherData());
+                    }
+                }
+                
+                @Override
+                public void onError(String message) 
+                {
+                    Log.e(TAG, "获取实时天气失败: " + message);
+                    runOnUiThread(() -> {
+                        Toast.makeText(MainActivity.this, "获取天气数据失败: " + message, Toast.LENGTH_SHORT).show();
+                        // 使用模拟数据作为备用
+                        simulateWeatherData();
+                    });
+                }
+            });
+            
+            // 获取空气质量数据
+            getAirQuality(location);
+        } 
+        catch (Exception e) 
+        {
+            Log.e(TAG, "获取天气服务失败", e);
+            runOnUiThread(() -> {
+                Toast.makeText(MainActivity.this, "天气服务初始化失败，使用模拟数据", Toast.LENGTH_SHORT).show();
+                simulateWeatherData();
+            });
+        }
+    }
+    
+    /**
+     * 获取三日天气预报
+     */
+    private void getWeatherForecast(String location) 
+    {
+        com.example.weather.api.WeatherService weatherService = com.example.weather.api.WeatherService.getInstance(this);
+        weatherService.getWeather3d(location, new com.example.weather.api.WeatherService.WeatherCallback<com.qweather.sdk.response.weather.WeatherDailyResponse>() 
+        {
+            @Override
+            public void onSuccess(com.qweather.sdk.response.weather.WeatherDailyResponse response) 
+            {
+                if (response.getDaily() != null && !response.getDaily().isEmpty()) 
+                {
+                    // 获取今天的最高和最低温度
+                    String tempMax = response.getDaily().get(0).getTempMax();
+                    String tempMin = response.getDaily().get(0).getTempMin();
+                    
+                    // 在UI线程中更新温度范围
+                    runOnUiThread(() -> {
+                        tvTemperatureRange.setText(tempMin + "° / " + tempMax + "°");
+                    });
+                }
+            }
+            
+            @Override
+            public void onError(String message) 
+            {
+                Log.e(TAG, "获取三日天气预报失败: " + message);
+            }
+        });
+    }
+    
+    /**
+     * 获取空气质量数据
+     */
+    private void getAirQuality(String location) 
+    {
+        com.example.weather.api.WeatherService weatherService = com.example.weather.api.WeatherService.getInstance(this);
+        weatherService.getAirNow(location, new com.example.weather.api.WeatherService.WeatherCallback<com.qweather.sdk.response.air.AirNowResponse>() 
+        {
+            @Override
+            public void onSuccess(com.qweather.sdk.response.air.AirNowResponse response) 
+            {
+                // 在UI线程中更新空气质量
+                runOnUiThread(() -> {
+                    String category = response.getNow().getCategory(); // 空气质量级别
+                    String aqi = response.getNow().getAqi();           // 空气质量指数
+                    tvAirQuality.setText("空气" + category + " " + aqi);
+                });
+            }
+            
+            @Override
+            public void onError(String message) 
+            {
+                Log.e(TAG, "获取空气质量失败: " + message);
+            }
+        });
     }
     
     /**
@@ -592,5 +1027,29 @@ public class MainActivity extends AppCompatActivity implements TodoAdapter.OnTod
         
         String message = isCompleted ? "已完成：" : "取消完成：";
         Toast.makeText(this, message + todo.getTitle(), Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * 转换和风天气API返回的天气文本为应用中使用的天气类型
+     * 
+     * @param text 和风天气API返回的天气文本
+     * @return 应用中使用的天气类型
+     */
+    private String convertWeatherText(String text) 
+    {
+        // 根据和风天气API文档中的天气状况代码，简化为应用中使用的几种天气类型
+        if (text.contains("晴")) {
+            return "晴";
+        } else if (text.contains("多云") || text.contains("阴")) {
+            return "多云";
+        } else if (text.contains("雨")) {
+            return "雨";
+        } else if (text.contains("雪")) {
+            return "雪";
+        } else if (text.contains("雾") || text.contains("霾")) {
+            return "雾";
+        } else {
+            return "晴"; // 默认
+        }
     }
 }

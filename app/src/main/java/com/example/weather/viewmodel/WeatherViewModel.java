@@ -19,71 +19,69 @@ public class WeatherViewModel extends AndroidViewModel
 {
     private static final String TAG = "WeatherViewModel";
     private final WeatherRepository weatherRepository;
-    private final MutableLiveData<WeatherInfo> weatherInfoLiveData = new MutableLiveData<>();
-    private final MutableLiveData<String> errorMessageLiveData = new MutableLiveData<>();
-    private final MutableLiveData<Boolean> isLoadingLiveData = new MutableLiveData<>(false);
+    private final MutableLiveData<WeatherInfo> weatherLiveData = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
+    private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
     
     public WeatherViewModel(@NonNull Application application) 
     {
         super(application);
-        weatherRepository = WeatherRepository.getInstance();
+        weatherRepository = WeatherRepository.getInstance(application);
     }
     
     /**
-     * 获取天气信息LiveData
+     * 获取天气数据
      */
-    public LiveData<WeatherInfo> getWeatherInfoLiveData() 
+    public LiveData<WeatherInfo> getWeatherData() 
     {
-        return weatherInfoLiveData;
+        return weatherLiveData;
     }
     
     /**
-     * 获取错误消息LiveData
+     * 获取加载状态
      */
-    public LiveData<String> getErrorMessageLiveData() 
+    public LiveData<Boolean> getIsLoading() 
     {
-        return errorMessageLiveData;
+        return isLoading;
     }
     
     /**
-     * 获取加载状态LiveData
+     * 获取错误信息
      */
-    public LiveData<Boolean> getIsLoadingLiveData() 
+    public LiveData<String> getErrorMessage() 
     {
-        return isLoadingLiveData;
+        return errorMessage;
     }
     
     /**
-     * 加载天气数据
-     * @param location 位置对象
+     * 根据位置获取天气数据
      */
     public void loadWeatherData(Location location) 
     {
         if (location == null) 
         {
-            errorMessageLiveData.setValue("位置信息为空");
+            errorMessage.setValue("位置信息为空");
             return;
         }
         
-        isLoadingLiveData.setValue(true);
-        Log.d(TAG, "开始加载天气数据: " + location.getLatitude() + ", " + location.getLongitude());
+        isLoading.setValue(true);
         
         weatherRepository.getWeatherData(location, new WeatherRepository.WeatherDataCallback() 
         {
             @Override
             public void onSuccess(WeatherInfo weatherInfo) 
             {
-                Log.d(TAG, "天气数据加载成功");
-                isLoadingLiveData.postValue(false);
-                weatherInfoLiveData.postValue(weatherInfo);
+                Log.d(TAG, "天气数据获取成功: " + weatherInfo.toString());
+                weatherLiveData.postValue(weatherInfo);
+                isLoading.postValue(false);
             }
             
             @Override
             public void onError(String error) 
             {
-                Log.e(TAG, "天气数据加载失败: " + error);
-                isLoadingLiveData.postValue(false);
-                errorMessageLiveData.postValue("加载天气数据失败: " + error);
+                Log.e(TAG, "天气数据获取失败: " + error);
+                errorMessage.postValue(error);
+                isLoading.postValue(false);
             }
         });
     }

@@ -4,11 +4,11 @@ import android.content.Context;
 import android.location.Location;
 import android.util.Log;
 
-import com.example.weather.api.QWeatherClient;
+import com.example.weather.api.WeatherService;
 import com.example.weather.model.WeatherInfo;
-import com.example.weather.model.qweather.AirNowResponse;
-import com.example.weather.model.qweather.WeatherForecastResponse;
-import com.example.weather.model.qweather.WeatherNowResponse;
+import com.qweather.sdk.response.air.AirNowResponse;
+import com.qweather.sdk.response.weather.WeatherDailyResponse;
+import com.qweather.sdk.response.weather.WeatherNowResponse;
 
 /**
  * 天气数据仓库
@@ -17,12 +17,13 @@ public class WeatherRepository
 {
     private static final String TAG = "WeatherRepository";
     private static WeatherRepository instance;
-    private final QWeatherClient weatherClient;
+    private final WeatherService weatherService;
+    private Context context;
     
     /**
      * 单例模式获取实例
      */
-    public static WeatherRepository getInstance() 
+    public static WeatherRepository getInstance(Context context) 
     {
         if (instance == null) 
         {
@@ -30,7 +31,7 @@ public class WeatherRepository
             {
                 if (instance == null) 
                 {
-                    instance = new WeatherRepository();
+                    instance = new WeatherRepository(context);
                 }
             }
         }
@@ -40,9 +41,10 @@ public class WeatherRepository
     /**
      * 私有构造函数
      */
-    private WeatherRepository() 
+    private WeatherRepository(Context context) 
     {
-        weatherClient = QWeatherClient.getInstance();
+        this.context = context.getApplicationContext();
+        weatherService = WeatherService.getInstance(this.context);
     }
     
     /**
@@ -66,19 +68,17 @@ public class WeatherRepository
         final WeatherInfo weatherInfo = new WeatherInfo();
         
         // 获取实时天气
-        weatherClient.getWeatherNow(locationString, new QWeatherClient.WeatherCallback<WeatherNowResponse>() 
+        weatherService.getWeatherNow(locationString, new WeatherService.WeatherCallback<WeatherNowResponse>() 
         {
             @Override
             public void onSuccess(WeatherNowResponse response) 
             {
-                WeatherNowResponse.WeatherNow now = response.getNow();
-                
                 // 填充天气信息
-                weatherInfo.setTemperature(now.getTemperature() + "°C");
-                weatherInfo.setWeatherDescription(now.getText());
-                weatherInfo.setHumidity(now.getHumidity() + "%");
-                weatherInfo.setWindDirection(now.getWindDir());
-                weatherInfo.setWindPower(now.getWindScale() + "级");
+                weatherInfo.setTemperature(response.getNow().getTemp() + "°C");
+                weatherInfo.setWeatherDescription(response.getNow().getText());
+                weatherInfo.setHumidity(response.getNow().getHumidity() + "%");
+                weatherInfo.setWindDirection(response.getNow().getWindDir());
+                weatherInfo.setWindPower(response.getNow().getWindScale() + "级");
                 
                 // 获取空气质量
                 getAirQualityData(locationString, weatherInfo, callback);
@@ -97,16 +97,14 @@ public class WeatherRepository
      */
     private void getAirQualityData(String location, final WeatherInfo weatherInfo, final WeatherDataCallback callback) 
     {
-        weatherClient.getAirNow(location, new QWeatherClient.WeatherCallback<AirNowResponse>() 
+        weatherService.getAirNow(location, new WeatherService.WeatherCallback<AirNowResponse>() 
         {
             @Override
             public void onSuccess(AirNowResponse response) 
             {
-                AirNowResponse.AirNow now = response.getNow();
-                
                 // 填充空气质量信息
-                weatherInfo.setAirQuality(now.getCategory());
-                weatherInfo.setAqi(now.getAqi());
+                weatherInfo.setAirQuality(response.getNow().getCategory());
+                weatherInfo.setAqi(response.getNow().getAqi());
                 
                 // 获取天气预报
                 getWeatherForecastData(location, weatherInfo, callback);
@@ -127,17 +125,16 @@ public class WeatherRepository
      */
     private void getWeatherForecastData(String location, final WeatherInfo weatherInfo, final WeatherDataCallback callback) 
     {
-        weatherClient.getWeatherForecast(location, new QWeatherClient.WeatherCallback<WeatherForecastResponse>() 
+        weatherService.getWeather3d(location, new WeatherService.WeatherCallback<WeatherDailyResponse>() 
         {
             @Override
-            public void onSuccess(WeatherForecastResponse response) 
+            public void onSuccess(WeatherDailyResponse response) 
             {
                 if (response.getDaily() != null && !response.getDaily().isEmpty()) 
                 {
                     // 添加天气预报信息（这里只获取第一天的预报作为示例）
-                    WeatherForecastResponse.DailyForecast forecast = response.getDaily().get(0);
-                    weatherInfo.setMaxTemperature(forecast.getTempMax() + "°C");
-                    weatherInfo.setMinTemperature(forecast.getTempMin() + "°C");
+                    weatherInfo.setMaxTemperature(response.getDaily().get(0).getTempMax() + "°C");
+                    weatherInfo.setMinTemperature(response.getDaily().get(0).getTempMin() + "°C");
                 }
                 
                 // 所有数据获取完成，回调成功

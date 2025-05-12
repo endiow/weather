@@ -19,3 +19,22 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+-keep public class com.qweather.sdk.QWeather {
+    public *;
+}
+
+-keep public class com.qweather.sdk.basic.**{ *; }
+-keepclassmembers class com.qweather.sdk.basic** { *; }
+
+-keep public class com.qweather.sdk.parameter.**{ *; }
+-keepclassmembers class com.qweather.sdk.parameter** { *; }
+
+-keep public class com.qweather.sdk.response.**{ *; }
+-keepclassmembers class com.qweather.sdk.response** { *; }
+
+-keep interface com.qweather.sdk.Callback{  *; }
+-keep interface com.qweather.sdk.TokenGenerator{  *; }
+-keep public class com.qweather.sdk.JWTGenerator {
+    public *;
+}
