@@ -48,7 +48,12 @@ dependencies {
     // Ed25519加密库 - 用于和风天气SDK的JWT认证
     implementation 'net.i2p.crypto:eddsa:0.3.0'
     
-    // 此处暂不添加Room、Retrofit等依赖，等确认主界面无误后再添加
+    // Room数据库
+    implementation 'androidx.room:room-runtime:2.6.1'
+    annotationProcessor 'androidx.room:room-compiler:2.6.1'
+    
+    // Google FlexboxLayout
+    implementation 'com.google.android.flexbox:flexbox:3.0.0'
     
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit

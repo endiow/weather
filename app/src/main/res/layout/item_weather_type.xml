@@ -1,36 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/cardWeatherType"
-    android:layout_width="wrap_content"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="4dp"
-    app:cardCornerRadius="10dp"
-    app:cardElevation="3dp">
+    android:paddingVertical="8dp"
+    android:background="?attr/selectableItemBackground">
 
-    <LinearLayout
-        android:layout_width="wrap_content"
+    <CheckBox
+        android:id="@+id/checkBoxWeather"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="12dp">
+        android:text="天气类型"
+        android:textSize="16sp"
+        android:textColor="#212121"
+        android:buttonTint="#3F51B5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
 
-        <ImageView
-            android:id="@+id/ivWeatherTypeIcon"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:contentDescription="天气图标"
-            android:padding="4dp"
-            android:src="@drawable/ic_sunny" />
-
-        <TextView
-            android:id="@+id/tvWeatherTypeName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="晴天"
-            android:textColor="@color/selector_text_color"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-</androidx.cardview.widget.CardView> 
+</androidx.constraintlayout.widget.ConstraintLayout> 

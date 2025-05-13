@@ -32,7 +32,8 @@
         <!-- 添加事项活动 -->
         <activity
             android:name=".AddTodoActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:theme="@style/Theme.Weather" />
             
         <!-- 待办清单活动 -->
         <activity

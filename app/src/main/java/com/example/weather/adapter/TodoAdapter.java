@@ -1,6 +1,7 @@
 package com.example.weather.adapter;
 
 import android.content.Context;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.weather.R;
+import com.example.weather.manager.TodoManager;
 import com.example.weather.model.Todo;
 
 import java.text.SimpleDateFormat;
@@ -25,6 +27,8 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.ViewHolder>
     private final Context context;
     private final List<Todo> todoList;
     private final SimpleDateFormat timeFormat;
+    private TodoManager todoManager;
+    private ItemClickListener itemClickListener;
     
     /**
      * 构造函数
@@ -36,6 +40,7 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.ViewHolder>
         this.context = context;
         this.todoList = todoList;
         this.timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
+        this.todoManager = TodoManager.getInstance(context);
     }
     
     @NonNull
@@ -94,9 +99,10 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.ViewHolder>
         
         // 设置天气条件
         StringBuilder conditions = new StringBuilder();
-        if (todo.getWeatherType() != null && !todo.getWeatherType().isEmpty()) 
+        List<String> weatherTypes = todo.getWeatherTypes();
+        if (weatherTypes != null && !weatherTypes.isEmpty()) 
         {
-            conditions.append(todo.getWeatherType());
+            conditions.append(TextUtils.join("、", weatherTypes));
         }
         
         if (todo.getAirQuality() != null && !todo.getAirQuality().isEmpty()) 
@@ -127,7 +133,31 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.ViewHolder>
         // 设置点击事件：切换完成状态
         holder.cbCompleted.setOnClickListener(v -> {
             todo.setCompleted(holder.cbCompleted.isChecked());
-            // 在实际应用中，这里应该调用TodoManager更新数据库
+            
+            // 更新数据库
+            todoManager.updateTodo(todo, new TodoManager.TodoCallback<Boolean>() 
+            {
+                @Override
+                public void onSuccess(Boolean result) 
+                {
+                    // 更新成功，不需要额外操作，UI已更新
+                }
+
+                @Override
+                public void onError(String errorMsg) 
+                {
+                    // 更新失败，恢复UI状态
+                    holder.cbCompleted.setChecked(!holder.cbCompleted.isChecked());
+                }
+            });
+        });
+        
+        // 设置整个项目的点击事件
+        holder.itemView.setOnClickListener(v -> {
+            if (itemClickListener != null) 
+            {
+                itemClickListener.onItemClick(todo, position);
+            }
         });
     }
     
@@ -135,6 +165,37 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.ViewHolder>
     public int getItemCount() 
     {
         return todoList.size();
+    }
+    
+    /**
+     * 更新数据
+     * @param newTodoList 新的待办事项列表
+     */
+    public void updateData(List<Todo> newTodoList) 
+    {
+        todoList.clear();
+        if (newTodoList != null) 
+        {
+            todoList.addAll(newTodoList);
+        }
+        notifyDataSetChanged();
+    }
+    
+    /**
+     * 设置项目点击监听器
+     * @param listener 监听器
+     */
+    public void setItemClickListener(ItemClickListener listener) 
+    {
+        this.itemClickListener = listener;
+    }
+    
+    /**
+     * 项目点击监听器接口
+     */
+    public interface ItemClickListener 
+    {
+        void onItemClick(Todo todo, int position);
     }
     
     /**
