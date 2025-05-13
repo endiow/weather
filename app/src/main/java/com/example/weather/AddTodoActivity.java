@@ -156,8 +156,34 @@ public class AddTodoActivity extends AppCompatActivity implements BottomNavigati
         if (title.isEmpty()) 
         {
             Toast.makeText(this, "请输入待办事项标题", Toast.LENGTH_SHORT).show();
+            etTodoTitle.requestFocus();
             return;
         }
+        
+        // 验证是否选择了至少一个天气类型
+        boolean hasWeatherType = cbSunny.isChecked() || cbCloudy.isChecked() || 
+                                 cbOvercast.isChecked() || cbRainy.isChecked() || 
+                                 cbOther.isChecked();
+        if (!hasWeatherType)
+        {
+            Toast.makeText(this, "请至少选择一种天气类型", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // 验证是否选择了至少一天
+        boolean hasDay = cbMonday.isChecked() || cbTuesday.isChecked() || 
+                         cbWednesday.isChecked() || cbThursday.isChecked() || 
+                         cbFriday.isChecked() || cbSaturday.isChecked() || 
+                         cbSunday.isChecked();
+        if (!hasDay)
+        {
+            Toast.makeText(this, "请至少选择一天", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // 禁用按钮，防止重复提交
+        btnAddEvent.setEnabled(false);
+        btnAddEvent.setText("保存中...");
         
         // 创建Todo对象
         Todo todo = new Todo(title, description);
@@ -232,6 +258,10 @@ public class AddTodoActivity extends AppCompatActivity implements BottomNavigati
                     
                     // 将焦点设置回标题输入框
                     etTodoTitle.requestFocus();
+                    
+                    // 重新启用按钮
+                    btnAddEvent.setEnabled(true);
+                    btnAddEvent.setText("添加事项");
                 });
             }
 
@@ -240,6 +270,9 @@ public class AddTodoActivity extends AppCompatActivity implements BottomNavigati
             {
                 runOnUiThread(() -> {
                     Toast.makeText(AddTodoActivity.this, "添加失败: " + errorMsg, Toast.LENGTH_SHORT).show();
+                    // 重新启用按钮
+                    btnAddEvent.setEnabled(true);
+                    btnAddEvent.setText("添加事项");
                 });
             }
         });
@@ -267,6 +300,8 @@ public class AddTodoActivity extends AppCompatActivity implements BottomNavigati
         {
             // 跳转到清单界面
             Intent intent = new Intent(this, TodoListActivity.class);
+            // 使用默认的天气类型，实际使用时应从MainActivity获取
+            intent.putExtra("current_weather_type", "晴");
             startActivity(intent);
             finish();
             return true;

@@ -1011,6 +1011,8 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         {
             // 跳转到清单界面
             Intent intent = new Intent(this, TodoListActivity.class);
+            // 传递当前天气类型
+            intent.putExtra("current_weather_type", currentWeatherType);
             startActivity(intent);
             finish();
             return true;

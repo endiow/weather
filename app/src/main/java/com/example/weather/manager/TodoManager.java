@@ -286,6 +286,71 @@ public class TodoManager
     }
     
     /**
+     * 删除多个待办事项
+     * @param todos 要删除的待办事项列表
+     * @param callback 回调
+     */
+    public void deleteTodos(List<Todo> todos, TodoCallback<Boolean> callback) 
+    {
+        if (todos == null || todos.isEmpty()) 
+        {
+            if (callback != null) 
+            {
+                callback.onSuccess(true);
+            }
+            return;
+        }
+        
+        // 创建一个计数器，用于跟踪删除操作的完成情况
+        final int[] deleteCount = {0};
+        final int totalCount = todos.size();
+        final boolean[] hasError = {false};
+        
+        for (Todo todo : todos) 
+        {
+            deleteTodo(todo.getId(), new TodoCallback<Boolean>() 
+            {
+                @Override
+                public void onSuccess(Boolean result) 
+                {
+                    if (result) 
+                    {
+                        deleteCount[0]++;
+                    }
+                    else 
+                    {
+                        hasError[0] = true;
+                    }
+                    
+                    // 检查是否所有操作都已完成
+                    if (deleteCount[0] + (hasError[0] ? 1 : 0) >= totalCount) 
+                    {
+                        if (callback != null) 
+                        {
+                            callback.onSuccess(!hasError[0]);
+                        }
+                    }
+                }
+                
+                @Override
+                public void onError(String errorMsg) 
+                {
+                    hasError[0] = true;
+                    
+                    // 检查是否所有操作都已完成
+                    if (deleteCount[0] + 1 >= totalCount) 
+                    {
+                        if (callback != null) 
+                        {
+                            callback.onError(errorMsg);
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    /**
      * 私有方法：在主线程上返回结果
      */
     private <T> void returnOnMainThread(TodoCallback<T> callback, T result, String errorMsg) 

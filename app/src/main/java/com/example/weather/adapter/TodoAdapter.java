@@ -1,6 +1,8 @@
 package com.example.weather.adapter;
 
 import android.content.Context;
+import android.graphics.Color;
+import android.content.res.ColorStateList;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,12 +14,16 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.weather.R;
+import com.example.weather.TodoListActivity;
 import com.example.weather.manager.TodoManager;
 import com.example.weather.model.Todo;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * 待办事项列表适配器
@@ -28,7 +34,9 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.ViewHolder>
     private final List<Todo> todoList;
     private final SimpleDateFormat timeFormat;
     private TodoManager todoManager;
-    private ItemClickListener itemClickListener;
+    private boolean isTodayTodos; // 是否是今日事项
+    private boolean isDeleteMode = false; // 是否处于删除模式
+    private Set<Integer> selectedItems = new HashSet<>(); // 已选中项目的位置集合
     
     /**
      * 构造函数
@@ -37,10 +45,89 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.ViewHolder>
      */
     public TodoAdapter(Context context, List<Todo> todoList) 
     {
+        this(context, todoList, false);
+    }
+    
+    /**
+     * 构造函数
+     * @param context 上下文
+     * @param todoList 待办事项列表
+     * @param isTodayTodos 是否是今日事项
+     */
+    public TodoAdapter(Context context, List<Todo> todoList, boolean isTodayTodos) 
+    {
         this.context = context;
         this.todoList = todoList;
         this.timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
         this.todoManager = TodoManager.getInstance(context);
+        this.isTodayTodos = isTodayTodos;
+    }
+    
+    /**
+     * 设置是否为今日事项
+     * @param isTodayTodos 是否是今日事项
+     */
+    public void setTodayTodos(boolean isTodayTodos) 
+    {
+        this.isTodayTodos = isTodayTodos;
+    }
+    
+    /**
+     * 切换删除模式
+     * @param deleteMode 是否进入删除模式
+     */
+    public void setDeleteMode(boolean deleteMode) 
+    {
+        if (this.isDeleteMode != deleteMode) 
+        {
+            this.isDeleteMode = deleteMode;
+            // 清空选中项
+            if (!deleteMode) 
+            {
+                selectedItems.clear();
+            }
+            notifyDataSetChanged();
+        }
+    }
+    
+    /**
+     * 获取当前是否处于删除模式
+     */
+    public boolean isDeleteMode() 
+    {
+        return isDeleteMode;
+    }
+    
+    /**
+     * 获取已选中的待办事项
+     */
+    public List<Todo> getSelectedTodos() 
+    {
+        List<Todo> selected = new ArrayList<>();
+        for (Integer position : selectedItems) 
+        {
+            if (position < todoList.size()) 
+            {
+                selected.add(todoList.get(position));
+            }
+        }
+        return selected;
+    }
+    
+    /**
+     * 全选或全不选
+     */
+    public void selectAll(boolean isSelected) 
+    {
+        selectedItems.clear();
+        if (isSelected) 
+        {
+            for (int i = 0; i < todoList.size(); i++) 
+            {
+                selectedItems.add(i);
+            }
+        }
+        notifyDataSetChanged();
     }
     
     @NonNull
@@ -98,28 +185,10 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.ViewHolder>
         }
         
         // 设置天气条件
-        StringBuilder conditions = new StringBuilder();
         List<String> weatherTypes = todo.getWeatherTypes();
         if (weatherTypes != null && !weatherTypes.isEmpty()) 
         {
-            conditions.append(TextUtils.join("、", weatherTypes));
-        }
-        
-        if (todo.getAirQuality() != null && !todo.getAirQuality().isEmpty()) 
-        {
-            if (conditions.length() > 0) conditions.append("，");
-            conditions.append("空气").append(todo.getAirQuality());
-        }
-        
-        if (todo.getHumidity() != null && !todo.getHumidity().isEmpty()) 
-        {
-            if (conditions.length() > 0) conditions.append("，");
-            conditions.append("湿度").append(todo.getHumidity());
-        }
-        
-        if (conditions.length() > 0) 
-        {
-            holder.tvConditions.setText(conditions.toString());
+            holder.tvConditions.setText(TextUtils.join("、", weatherTypes));
             holder.tvConditions.setVisibility(View.VISIBLE);
         } 
         else 
@@ -130,33 +199,93 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.ViewHolder>
         // 设置完成状态
         holder.cbCompleted.setChecked(todo.isCompleted());
         
-        // 设置点击事件：切换完成状态
+        // 设置删除复选框颜色为绿色
+        int greenColor = context.getResources().getColor(android.R.color.holo_green_dark);
+        holder.cbDelete.setButtonTintList(ColorStateList.valueOf(greenColor));
+        
+        // 设置删除模式下的UI
+        if (isDeleteMode) 
+        {
+            // 删除模式：显示左侧删除复选框，隐藏右侧完成状态复选框
+            holder.cbDelete.setVisibility(View.VISIBLE);
+            holder.cbDelete.setChecked(selectedItems.contains(position));
+            holder.cbCompleted.setVisibility(View.GONE);
+        } 
+        else 
+        {
+            // 正常模式：隐藏左侧删除复选框，显示右侧完成状态复选框
+            holder.cbDelete.setVisibility(View.GONE);
+            holder.cbCompleted.setVisibility(View.VISIBLE);
+        }
+        
+        // 确保每个项目有统一的最小高度，但保持较扁平的外观
+        float density = context.getResources().getDisplayMetrics().density;
+        holder.itemView.setMinimumHeight((int)(80 * density));
+        
+        // 设置点击事件：切换完成状态并刷新列表
         holder.cbCompleted.setOnClickListener(v -> {
-            todo.setCompleted(holder.cbCompleted.isChecked());
-            
-            // 更新数据库
-            todoManager.updateTodo(todo, new TodoManager.TodoCallback<Boolean>() 
-            {
-                @Override
-                public void onSuccess(Boolean result) 
+            if (!isDeleteMode) {
+                todo.setCompleted(holder.cbCompleted.isChecked());
+                
+                // 更新数据库
+                todoManager.updateTodo(todo, new TodoManager.TodoCallback<Boolean>() 
                 {
-                    // 更新成功，不需要额外操作，UI已更新
-                }
+                    @Override
+                    public void onSuccess(Boolean result) 
+                    {
+                        // 更新成功，通知Activity刷新列表以重新排序
+                        if (context instanceof TodoListActivity && result) 
+                        {
+                            ((TodoListActivity) context).refreshTodoList();
+                        }
+                    }
 
-                @Override
-                public void onError(String errorMsg) 
-                {
-                    // 更新失败，恢复UI状态
-                    holder.cbCompleted.setChecked(!holder.cbCompleted.isChecked());
-                }
-            });
+                    @Override
+                    public void onError(String errorMsg) 
+                    {
+                        // 更新失败，恢复UI状态
+                        holder.cbCompleted.setChecked(!holder.cbCompleted.isChecked());
+                    }
+                });
+            }
         });
         
-        // 设置整个项目的点击事件
+        // 设置删除复选框点击事件
+        holder.cbDelete.setOnClickListener(v -> {
+            final int pos = holder.getAdapterPosition();
+            if (pos != RecyclerView.NO_POSITION) {
+                if (holder.cbDelete.isChecked()) {
+                    selectedItems.add(pos);
+                } else {
+                    selectedItems.remove(pos);
+                }
+                
+                // 通知Activity更新删除按钮状态
+                if (context instanceof TodoListActivity) {
+                    ((TodoListActivity) context).updateDeleteButtonState();
+                }
+            }
+        });
+        
+        // 设置项目点击事件（用于在删除模式下快速选择）
         holder.itemView.setOnClickListener(v -> {
-            if (itemClickListener != null) 
-            {
-                itemClickListener.onItemClick(todo, position);
+            if (isDeleteMode) {
+                final int pos = holder.getAdapterPosition();
+                if (pos != RecyclerView.NO_POSITION) {
+                    boolean newState = !holder.cbDelete.isChecked();
+                    holder.cbDelete.setChecked(newState);
+                    
+                    if (newState) {
+                        selectedItems.add(pos);
+                    } else {
+                        selectedItems.remove(pos);
+                    }
+                    
+                    // 通知Activity更新删除按钮状态
+                    if (context instanceof TodoListActivity) {
+                        ((TodoListActivity) context).updateDeleteButtonState();
+                    }
+                }
             }
         });
     }
@@ -178,24 +307,20 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.ViewHolder>
         {
             todoList.addAll(newTodoList);
         }
+        selectedItems.clear(); // 清空选中项
         notifyDataSetChanged();
     }
     
     /**
-     * 设置项目点击监听器
-     * @param listener 监听器
+     * 删除选中的项目
      */
-    public void setItemClickListener(ItemClickListener listener) 
+    public void deleteSelectedItems() 
     {
-        this.itemClickListener = listener;
-    }
-    
-    /**
-     * 项目点击监听器接口
-     */
-    public interface ItemClickListener 
-    {
-        void onItemClick(Todo todo, int position);
+        if (selectedItems.size() > 0 && context instanceof TodoListActivity) 
+        {
+            List<Todo> toDelete = getSelectedTodos();
+            ((TodoListActivity) context).deleteTodos(toDelete);
+        }
     }
     
     /**
@@ -208,6 +333,7 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.ViewHolder>
         final TextView tvTime;
         final TextView tvConditions;
         final CheckBox cbCompleted;
+        final CheckBox cbDelete;
         
         ViewHolder(@NonNull View itemView) 
         {
@@ -217,6 +343,7 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.ViewHolder>
             tvTime = itemView.findViewById(R.id.tvTodoTimeRange);
             tvConditions = itemView.findViewById(R.id.tvTodoWeatherType);
             cbCompleted = itemView.findViewById(R.id.cbTodoComplete);
+            cbDelete = itemView.findViewById(R.id.cbDelete);
         }
     }
 } 
