@@ -44,6 +44,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.example.weather.manager.TodoManager;
 import com.example.weather.model.Todo;
 import com.example.weather.util.AlarmScheduler;
+import com.example.weather.util.LocationPreferences;
 import com.qweather.sdk.response.weather.WeatherHourlyResponse;
 import com.qweather.sdk.response.weather.WeatherHourly;
 
@@ -54,6 +55,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+
+import com.example.weather.util.WeatherTypeUtil;
+import com.example.weather.util.WeatherTypeUtil.WeatherType;
 
 public class MainActivity extends AppCompatActivity implements BottomNavigationView.OnItemSelectedListener
 {
@@ -204,36 +208,54 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
      */
     private void updateBackgroundByWeather(String weatherType) 
     {
-        if (mainLayout == null) 
+        if (weatherType == null || weatherType.isEmpty()) 
         {
             return;
         }
         
-        // 默认背景
-        int backgroundResId = R.drawable.bg_weather_default;
+        // 使用WeatherTypeUtil获取标准化的天气类型
+        WeatherType type = WeatherTypeUtil.getWeatherType(weatherType);
+        String backgroundKey;
         
-        // 查找对应的背景
-        if (weatherBackgrounds.containsKey(weatherType)) 
+        // 根据分类的天气类型选择背景
+        switch (type) 
         {
-            backgroundResId = weatherBackgrounds.get(weatherType);
-        } 
-        else 
-        {
-            // 如果没有完全匹配，尝试部分匹配
-            for (Map.Entry<String, Integer> entry : weatherBackgrounds.entrySet()) 
-            {
-                if (weatherType.contains(entry.getKey())) 
+            case SUNNY:
+                backgroundKey = "晴";
+                break;
+            case CLOUDY:
+                backgroundKey = "多云";
+                break;
+            case OVERCAST:
+                backgroundKey = "阴";
+                break;
+            case RAINY:
+                backgroundKey = "小雨";
+                break;
+            case OTHER:
+            default:
+                // 尝试直接用原始文本匹配，如果没有则使用多云作为默认
+                if (weatherBackgrounds.containsKey(weatherType)) 
                 {
-                    backgroundResId = entry.getValue();
-                    break;
+                    backgroundKey = weatherType;
+                } 
+                else 
+                {
+                    backgroundKey = "多云";  // 默认背景
                 }
-            }
+                break;
         }
         
-        // 设置背景
-        mainLayout.setBackgroundResource(backgroundResId);
-        
-        Log.d(TAG, "已根据天气类型 [" + weatherType + "] 更新背景");
+        Integer backgroundResId = weatherBackgrounds.get(backgroundKey);
+        if (backgroundResId != null) 
+        {
+            mainLayout.setBackgroundResource(backgroundResId);
+            
+            // 更新当前天气类型
+            currentWeatherType = weatherType;
+            
+            Log.d(TAG, "已更新天气背景为: " + backgroundKey);
+        }
     }
     
     /**
@@ -419,6 +441,9 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
                 
                 Log.d(TAG, "使用最后已知网络位置 - 纬度: " + latitude + ", 经度: " + longitude);
                 
+                // 保存位置信息
+                LocationPreferences.saveLocation(this, latitude, longitude);
+                
                 // 获取城市信息
                 getCityInfo(latitude, longitude);
                 
@@ -447,6 +472,9 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
                 longitude = lastKnownLocation.getLongitude();
                 
                 Log.d(TAG, "使用最后已知GPS位置 - 纬度: " + latitude + ", 经度: " + longitude);
+                
+                // 保存位置信息
+                LocationPreferences.saveLocation(this, latitude, longitude);
                 
                 // 获取城市信息
                 getCityInfo(latitude, longitude);
@@ -974,6 +1002,9 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
             
             latitude = location.getLatitude();
             longitude = location.getLongitude();
+            
+            // 保存位置信息
+            LocationPreferences.saveLocation(MainActivity.this, latitude, longitude);
             
             // 停止位置更新以节省电量
             if (locationManager != null) 

@@ -6,18 +6,16 @@ import android.content.Intent;
 import android.util.Log;
 
 import com.example.weather.api.WeatherService;
+import com.example.weather.api.WeatherInfo;
 import com.example.weather.api.WeatherCallback;
 import com.example.weather.manager.TodoManager;
 import com.example.weather.model.Todo;
 import com.example.weather.util.NotificationHelper;
-import com.qweather.sdk.response.weather.WeatherHourlyResponse;
-import com.qweather.sdk.response.weather.WeatherHourly;
+import com.example.weather.util.WeatherTypeUtil;
+import com.example.weather.util.WeatherTypeUtil.WeatherType;
+import com.example.weather.util.LocationPreferences;
 
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * 提醒接收器
@@ -89,43 +87,34 @@ public class ReminderReceiver extends BroadcastReceiver
      */
     private void checkWeatherConditions(Todo todo) 
     {
-        // 获取当前位置的天气预报
-        // 这里使用固定的位置，实际应用中应该获取用户的实际位置
-        double latitude = 39.9042; // 北京的纬度
-        double longitude = 116.4074; // 北京的经度
+        // 获取保存的位置信息
+        double[] location = LocationPreferences.getLocation(context);
+        double latitude = location[0];
+        double longitude = location[1];
         
-        // 获取24小时天气预报
-        WeatherService.getInstance(context).getWeatherHourlyForecast(latitude, longitude, new WeatherCallback<WeatherHourlyResponse>() 
+        Log.d(TAG, "使用位置 - 纬度: " + latitude + ", 经度: " + longitude);
+        
+        // 修改为获取实时天气
+        WeatherService.getInstance(context).getWeatherNow(String.format("%.2f,%.2f", longitude, latitude), new WeatherCallback<WeatherInfo>() 
         {
             @Override
-            public void onSuccess(WeatherHourlyResponse response) 
+            public void onSuccess(WeatherInfo weatherInfo) 
             {
-                if (response.getCode() == null || !response.getCode().equals("200")) 
+                if (weatherInfo.hasError()) 
                 {
-                    Log.e(TAG, "获取天气预报出错: " + response.getCode());
+                    Log.e(TAG, "获取实时天气出错: " + weatherInfo.error);
                     // 天气获取失败时也发送通知，以确保用户不会错过重要事项
                     sendNotification(todo, null);
                     return;
                 }
                 
-                // 获取当前小时的预报
-                WeatherHourly currentWeather = getCurrentHourWeather(response.getHourly());
-                
-                if (currentWeather == null) 
-                {
-                    Log.e(TAG, "找不到当前小时的天气预报");
-                    // 找不到当前小时预报时也发送通知
-                    sendNotification(todo, null);
-                    return;
-                }
-                
                 // 检查天气是否匹配
-                boolean weatherMatches = checkWeatherMatches(todo, currentWeather);
+                boolean weatherMatches = checkWeatherMatches(todo, weatherInfo);
                 
                 if (weatherMatches) 
                 {
                     // 天气匹配，发送通知
-                    sendNotification(todo, currentWeather);
+                    sendNotification(todo, weatherInfo);
                 } 
                 else 
                 {
@@ -136,7 +125,7 @@ public class ReminderReceiver extends BroadcastReceiver
             @Override
             public void onError(String errorMsg) 
             {
-                Log.e(TAG, "获取天气预报失败: " + errorMsg);
+                Log.e(TAG, "获取实时天气失败: " + errorMsg);
                 // 获取天气失败时也发送通知
                 sendNotification(todo, null);
             }
@@ -144,64 +133,13 @@ public class ReminderReceiver extends BroadcastReceiver
     }
     
     /**
-     * 获取当前小时的天气预报
-     * 
-     * @param hourlyList 小时级天气预报列表
-     * @return 当前小时的天气预报
-     */
-    private WeatherHourly getCurrentHourWeather(List<WeatherHourly> hourlyList) 
-    {
-        if (hourlyList == null || hourlyList.isEmpty()) 
-        {
-            return null;
-        }
-        
-        // 获取当前时间
-        Calendar calendar = Calendar.getInstance();
-        int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
-        
-        // 日期格式化，用于比较日期
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        String today = dateFormat.format(new Date());
-        
-        // 查找当前小时或最接近的未来小时的天气预报
-        for (WeatherHourly hourly : hourlyList) 
-        {
-            try 
-            {
-                // 解析预报时间
-                // 预报时间格式: 2023-05-08T15:00+08:00
-                String fxTimeStr = hourly.getFxTime();
-                
-                // 提取日期和小时
-                String[] parts = fxTimeStr.split("T");
-                String date = parts[0];
-                int hour = Integer.parseInt(parts[1].substring(0, 2));
-                
-                // 检查是否是今天的预报，且小时大于等于当前小时
-                if (date.equals(today) && hour >= currentHour) 
-                {
-                    return hourly;
-                }
-            } 
-            catch (Exception e) 
-            {
-                Log.e(TAG, "解析预报时间出错: " + e.getMessage());
-            }
-        }
-        
-        // 如果没有找到当前小时或未来小时的预报，返回第一个预报
-        return hourlyList.get(0);
-    }
-    
-    /**
      * 检查天气是否匹配待办事项的条件
      * 
      * @param todo 待办事项
-     * @param weather 当前天气
+     * @param weatherInfo 当前天气信息
      * @return 是否匹配
      */
-    private boolean checkWeatherMatches(Todo todo, WeatherHourly weather) 
+    private boolean checkWeatherMatches(Todo todo, WeatherInfo weatherInfo) 
     {
         // 获取待办事项的天气类型列表
         List<String> todoWeatherTypes = todo.getWeatherTypes();
@@ -213,42 +151,66 @@ public class ReminderReceiver extends BroadcastReceiver
         }
         
         // 获取当前天气状况
-        String currentWeather = weather.getText();
-        if (currentWeather == null) 
+        String currentWeatherText = weatherInfo.text;
+        if (currentWeatherText == null || currentWeatherText.isEmpty()) 
         {
-            Log.e(TAG, "当前天气为null");
+            Log.e(TAG, "当前天气文本为空");
             return false;
         }
         
-        Log.d(TAG, "当前天气: " + currentWeather + ", 待办事项天气类型: " + todoWeatherTypes);
+        // 使用WeatherTypeUtil获取天气类型
+        WeatherType currentWeatherType = WeatherTypeUtil.getWeatherType(currentWeatherText);
+        String currentWeatherTypeDesc = WeatherTypeUtil.getWeatherTypeDescription(currentWeatherType);
+        
+        Log.d(TAG, "当前天气: " + currentWeatherText + 
+              ", 分类: " + currentWeatherTypeDesc + 
+              ", 待办事项天气类型: " + todoWeatherTypes);
         
         // 检查湿度是否匹配
-        boolean humidityMatches = checkHumidityMatches(todo.getHumidity(), weather.getHumidity());
+        boolean humidityMatches = checkHumidityMatches(todo.getHumidity(), weatherInfo.humidity);
         
         // 检查天气状况是否匹配
         for (String weatherType : todoWeatherTypes) 
         {
-            // 特殊情况处理
-            if (weatherType.equals("晴天") && currentWeather.equals("晴")) 
+            // 将待办事项天气类型与当前天气类型进行比较
+            switch (currentWeatherType) 
             {
-                return humidityMatches;
-            }
-            else if (weatherType.equals("多云") && (currentWeather.equals("多云") || currentWeather.contains("云"))) 
-            {
-                return humidityMatches;
-            }
-            else if (weatherType.equals("阴天") && (currentWeather.equals("阴") || currentWeather.contains("阴"))) 
-            {
-                return humidityMatches;
-            }
-            else if (weatherType.equals("下雨") && (currentWeather.contains("雨") || currentWeather.contains("雷"))) 
-            {
-                return humidityMatches;
-            }
-            // 常规匹配：检查当前天气是否包含设定的天气类型
-            else if (currentWeather.contains(weatherType)) 
-            {
-                return humidityMatches;
+                case SUNNY:
+                    if (weatherType.equals("晴天") || weatherType.equals("晴")) 
+                    {
+                        return humidityMatches;
+                    }
+                    break;
+                    
+                case CLOUDY:
+                    if (weatherType.equals("多云")) 
+                    {
+                        return humidityMatches;
+                    }
+                    break;
+                    
+                case OVERCAST:
+                    if (weatherType.equals("阴天") || weatherType.equals("阴")) 
+                    {
+                        return humidityMatches;
+                    }
+                    break;
+                    
+                case RAINY:
+                    if (weatherType.equals("下雨") || weatherType.equals("雨天") || 
+                        weatherType.contains("雨")) 
+                    {
+                        return humidityMatches;
+                    }
+                    break;
+                    
+                case OTHER:
+                    // 对于其他类型，直接检查文本是否包含关键词
+                    if (currentWeatherText.contains(weatherType)) 
+                    {
+                        return humidityMatches;
+                    }
+                    break;
             }
         }
         
@@ -295,9 +257,9 @@ public class ReminderReceiver extends BroadcastReceiver
      * 发送通知
      * 
      * @param todo 待办事项
-     * @param weather 当前天气
+     * @param weatherInfo 当前天气信息
      */
-    private void sendNotification(Todo todo, WeatherHourly weather) 
+    private void sendNotification(Todo todo, WeatherInfo weatherInfo) 
     {
         String title = todo.getTitle();
         
@@ -306,11 +268,11 @@ public class ReminderReceiver extends BroadcastReceiver
         contentBuilder.append(todo.getDescription());
         
         // 如果有天气信息，添加到通知内容
-        if (weather != null) 
+        if (weatherInfo != null) 
         {
-            contentBuilder.append("\n当前天气: ").append(weather.getText());
-            contentBuilder.append(", 温度: ").append(weather.getTemp()).append("°C");
-            contentBuilder.append(", 湿度: ").append(weather.getHumidity()).append("%");
+            contentBuilder.append("\n当前天气: ").append(weatherInfo.text);
+            contentBuilder.append(", 温度: ").append(weatherInfo.temp).append("°C");
+            contentBuilder.append(", 湿度: ").append(weatherInfo.humidity).append("%");
         }
         
         String content = contentBuilder.toString();

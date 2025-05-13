@@ -6,12 +6,12 @@ import android.content.Intent;
 import android.util.Log;
 
 import com.example.weather.api.WeatherService;
+import com.example.weather.api.WeatherInfo;
 import com.example.weather.api.WeatherCallback;
 import com.example.weather.manager.TodoManager;
 import com.example.weather.model.Todo;
 import com.example.weather.util.AlarmScheduler;
-import com.qweather.sdk.response.weather.WeatherHourlyResponse;
-import com.qweather.sdk.response.weather.WeatherHourly;
+import com.example.weather.util.LocationPreferences;
 
 import java.util.List;
 
@@ -26,64 +26,75 @@ public class BootReceiver extends BroadcastReceiver
     @Override
     public void onReceive(Context context, Intent intent) 
     {
-        if (intent.getAction() != null && intent.getAction().equals(Intent.ACTION_BOOT_COMPLETED)) 
+        if (intent != null && intent.getAction() != null) 
         {
-            Log.d(TAG, "设备已重启，重新安排所有提醒");
+            Log.d(TAG, "接收到行为: " + intent.getAction());
             
-            // 获取未完成的待办事项
-            TodoManager.getInstance(context).getIncompleteTodos(new TodoManager.TodoCallback<List<Todo>>() 
+            // 系统启动完成
+            if (intent.getAction().equals(Intent.ACTION_BOOT_COMPLETED) ||
+                intent.getAction().equals("android.intent.action.QUICKBOOT_POWERON") ||
+                intent.getAction().equals("com.htc.intent.action.QUICKBOOT_POWERON")) 
             {
-                @Override
-                public void onSuccess(List<Todo> todoList) 
+                Log.d(TAG, "设备启动完成，重新注册提醒");
+                
+                // 获取所有带提醒的待办事项
+                TodoManager.getInstance(context).getAllTodos(new TodoManager.TodoCallback<List<Todo>>() 
                 {
-                    if (todoList == null || todoList.isEmpty()) 
+                    @Override
+                    public void onSuccess(List<Todo> todoList) 
                     {
-                        Log.d(TAG, "没有未完成的待办事项，无需重新安排提醒");
-                        return;
+                        if (todoList == null || todoList.isEmpty()) 
+                        {
+                            Log.d(TAG, "没有待办事项需要重新设置提醒");
+                            return;
+                        }
+                        
+                        Log.d(TAG, "找到 " + todoList.size() + " 个待办事项，重新获取天气信息并设置提醒");
+                        
+                        // 获取天气信息并重设提醒
+                        refreshWeatherData(context, todoList);
                     }
                     
-                    Log.d(TAG, "找到 " + todoList.size() + " 个未完成的待办事项");
-                    
-                    // 获取最新的天气预报
-                    refreshWeatherForecast(context, todoList);
-                }
-                
-                @Override
-                public void onError(String errorMsg) 
-                {
-                    Log.e(TAG, "获取未完成的待办事项失败: " + errorMsg);
-                }
-            });
+                    @Override
+                    public void onError(String errorMsg) 
+                    {
+                        Log.e(TAG, "获取待办事项列表失败: " + errorMsg);
+                    }
+                });
+            }
         }
     }
     
     /**
-     * 刷新天气预报并重新安排提醒
+     * 刷新天气数据
      * 
      * @param context 上下文
      * @param todoList 待办事项列表
      */
-    private void refreshWeatherForecast(Context context, List<Todo> todoList) 
+    private void refreshWeatherData(Context context, List<Todo> todoList) 
     {
-        // 这里使用固定的位置，实际应用中应该获取用户的实际位置
-        double latitude = 39.9042; // 北京的纬度
-        double longitude = 116.4074; // 北京的经度
+        // 获取保存的位置信息
+        double[] location = LocationPreferences.getLocation(context);
+        double latitude = location[0];
+        double longitude = location[1];
         
-        // 获取24小时天气预报
-        WeatherService.getInstance(context).getWeatherHourlyForecast(latitude, longitude, new WeatherCallback<WeatherHourlyResponse>() 
+        Log.d(TAG, "使用位置 - 纬度: " + latitude + ", 经度: " + longitude);
+        
+        // 改为获取实时天气预报
+        WeatherService.getInstance(context).getWeatherNow(String.format("%.2f,%.2f", longitude, latitude), new WeatherCallback<WeatherInfo>() 
         {
             @Override
-            public void onSuccess(WeatherHourlyResponse response) 
+            public void onSuccess(WeatherInfo weatherInfo) 
             {
-                if (response.getCode() == null || !response.getCode().equals("200")) 
+                if (weatherInfo.hasError()) 
                 {
-                    Log.e(TAG, "获取天气预报出错: " + response.getCode());
+                    Log.e(TAG, "获取实时天气出错: " + weatherInfo.error);
                     // 即使获取天气失败，也重新安排提醒
                     rescheduleReminders(context, todoList);
                     return;
                 }
                 
-                Log.d(TAG, "获取24小时天气预报成功，重新安排提醒");
+                Log.d(TAG, "获取实时天气成功，重新安排提醒");
                 
                 // 重新安排提醒
                 rescheduleReminders(context, todoList);
@@ -92,7 +103,7 @@ public class BootReceiver extends BroadcastReceiver
             @Override
             public void onError(String errorMsg) 
             {
-                Log.e(TAG, "获取天气预报失败: " + errorMsg);
+                Log.e(TAG, "获取实时天气失败: " + errorMsg);
                 // 即使获取天气失败，也重新安排提醒
                 rescheduleReminders(context, todoList);
             }
@@ -107,10 +118,18 @@ public class BootReceiver extends BroadcastReceiver
      */
     private void rescheduleReminders(Context context, List<Todo> todoList) 
     {
-        // 创建闹钟调度器并安排提醒
         AlarmScheduler alarmScheduler = new AlarmScheduler(context);
-        alarmScheduler.scheduleTodos(todoList);
         
-        Log.d(TAG, "已重新安排 " + todoList.size() + " 个待办事项的提醒");
+        for (Todo todo : todoList) 
+        {
+            // 只为未完成且有提醒的待办事项设置提醒
+            if (!todo.isCompleted() && todo.isRemindable() && todo.getStartTime() != null) 
+            {
+                alarmScheduler.scheduleTodo(todo);
+                Log.d(TAG, "为待办事项 " + todo.getId() + " 重新设置提醒: " + todo.getTitle());
+            }
+        }
+        
+        Log.d(TAG, "所有待办事项的提醒已重新安排");
     }
 } 
