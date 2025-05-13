@@ -783,4 +783,70 @@ public class WeatherService
             callback.onError(error);
         }
     }
+
+    /**
+     * 获取24小时天气预报
+     * 
+     * @param latitude 纬度
+     * @param longitude 经度
+     * @param callback 回调接口
+     */
+    public void getWeatherHourlyForecast(double latitude, double longitude, final WeatherCallback<WeatherHourlyResponse> callback) 
+    {
+        if (!checkInitialized(callback)) return;
+        
+        try 
+        {
+            Log.d(TAG, "获取位置(" + latitude + "," + longitude + ")的24小时天气预报");
+            
+            // 构建位置字符串: 经度,纬度
+            String location = String.format(java.util.Locale.US, "%.4f,%.4f", longitude, latitude);
+            
+            // 创建天气查询参数
+            com.qweather.sdk.parameter.weather.WeatherParameter parameter = new com.qweather.sdk.parameter.weather.WeatherParameter(location);
+            
+            // 调用API获取24小时天气预报
+            qWeather.weather24h(parameter, new com.qweather.sdk.Callback<com.qweather.sdk.response.weather.WeatherHourlyResponse>() 
+            {
+                @Override
+                public void onSuccess(com.qweather.sdk.response.weather.WeatherHourlyResponse response) 
+                {
+                    Log.d(TAG, "获取24小时天气预报成功: " + response.toString());
+                    
+                    if (STATUS_OK.equals(response.getCode())) 
+                    {
+                        callback.onSuccess(response);
+                    } 
+                    else 
+                    {
+                        String error = "API返回错误: " + response.getCode();
+                        Log.e(TAG, error);
+                        callback.onError(error);
+                    }
+                }
+
+                @Override
+                public void onFailure(com.qweather.sdk.response.error.ErrorResponse errorResponse) 
+                {
+                    String error = "获取24小时天气预报失败: " + errorResponse.toString();
+                    Log.e(TAG, error);
+                    callback.onError(error);
+                }
+
+                @Override
+                public void onException(Throwable e) 
+                {
+                    String error = "获取24小时天气预报异常: " + e.getMessage();
+                    Log.e(TAG, error, e);
+                    callback.onError(error);
+                }
+            });
+        } 
+        catch (Exception e) 
+        {
+            String error = "发送24小时天气预报请求异常: " + e.getMessage();
+            Log.e(TAG, error, e);
+            callback.onError(error);
+        }
+    }
 } 

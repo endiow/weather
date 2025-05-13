@@ -41,6 +41,12 @@ import com.example.weather.api.WeatherInfo;
 import com.example.weather.api.WeatherService;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
+import com.example.weather.manager.TodoManager;
+import com.example.weather.model.Todo;
+import com.example.weather.util.AlarmScheduler;
+import com.qweather.sdk.response.weather.WeatherHourlyResponse;
+import com.qweather.sdk.response.weather.WeatherHourly;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -319,18 +325,25 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     {
         super.onResume();
         
-        // 当应用返回前台时，强制刷新天气数据（如果已有位置信息）
+        // 开始定时更新
+        startPeriodicUpdates();
+        
+        // 更新提醒计划
+        updateTodoReminders();
+        
+        // 如果已有位置信息，则直接获取天气
         if (latitude != 0 && longitude != 0) 
         {
-            if (!currentCityId.isEmpty()) 
-            {
-                getWeatherInfo(currentCityId);
-            }
+            getCityInfo(latitude, longitude);
             getAirQualityInfo(latitude, longitude);
+            getRainForecast(latitude, longitude);
+            get24HourWeatherForecast(latitude, longitude);
+        } 
+        else 
+        {
+            // 否则，尝试获取位置
+            getLocation();
         }
-        
-        // 启动定时更新
-        startPeriodicUpdates();
     }
     
     @Override
@@ -1019,5 +1032,78 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         }
         
         return false;
+    }
+
+    /**
+     * 获取24小时天气预报
+     * 
+     * @param latitude 纬度
+     * @param longitude 经度
+     */
+    private void get24HourWeatherForecast(double latitude, double longitude) 
+    {
+        // 显示加载进度
+        // 如果需要，可以在这里添加进度条显示
+        
+        WeatherService.getInstance(this).getWeatherHourlyForecast(latitude, longitude, new WeatherCallback<WeatherHourlyResponse>() 
+        {
+            @Override
+            public void onSuccess(WeatherHourlyResponse response) 
+            {
+                if (response.getCode() == null || !response.getCode().equals("200")) 
+                {
+                    Log.e(TAG, "获取24小时天气预报失败: " + response.getCode());
+                    return;
+                }
+                
+                Log.d(TAG, "获取24小时天气预报成功");
+                
+                // 更新提醒计划
+                updateTodoReminders();
+            }
+            
+            @Override
+            public void onError(String message) 
+            {
+                Log.e(TAG, "获取24小时天气预报出错: " + message);
+            }
+        });
+    }
+    
+    /**
+     * 更新待办事项提醒
+     * 获取当天的待办事项并重新安排提醒
+     */
+    private void updateTodoReminders() 
+    {
+        TodoManager.getInstance(this).getTodosForToday(new TodoManager.TodoCallback<List<Todo>>() 
+        {
+            @Override
+            public void onSuccess(List<Todo> todoList) 
+            {
+                if (todoList == null || todoList.isEmpty()) 
+                {
+                    Log.d(TAG, "今天没有待办事项需要提醒");
+                    return;
+                }
+                
+                Log.d(TAG, "找到 " + todoList.size() + " 个今天的待办事项，重新安排提醒");
+                
+                // 创建提醒调度器
+                AlarmScheduler alarmScheduler = new AlarmScheduler(MainActivity.this);
+                
+                // 先取消所有提醒，然后重新安排
+                alarmScheduler.cancelAll(todoList);
+                alarmScheduler.scheduleTodos(todoList);
+                
+                Log.d(TAG, "已更新今天的待办事项提醒");
+            }
+            
+            @Override
+            public void onError(String errorMsg) 
+            {
+                Log.e(TAG, "获取今天的待办事项失败: " + errorMsg);
+            }
+        });
     }
 }
