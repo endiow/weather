@@ -28,6 +28,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <!-- 添加事项活动 -->
+        <activity
+            android:name=".AddTodoActivity"
+            android:exported="false" />
+            
+        <!-- 待办清单活动 -->
+        <activity
+            android:name=".TodoListActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

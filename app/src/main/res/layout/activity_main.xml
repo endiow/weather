@@ -16,7 +16,7 @@
         android:paddingStart="20dp"
         android:paddingTop="48dp"
         android:paddingEnd="20dp"
-        android:paddingBottom="50dp"
+        android:paddingBottom="45dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <!-- 位置信息 - 适配两级地理信息显示 -->
@@ -280,5 +280,17 @@
         </androidx.cardview.widget.CardView>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- 底部导航栏 -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="30dp"
+        android:layout_gravity="bottom"
+        android:background="@android:color/white"
+        app:labelVisibilityMode="labeled"
+        app:itemTextAppearanceActive="@style/BottomNavigationTextStyle"
+        app:itemTextAppearanceInactive="@style/BottomNavigationTextStyle"
+        app:menu="@menu/bottom_nav_menu" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

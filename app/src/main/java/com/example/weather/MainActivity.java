@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -38,7 +39,7 @@ import com.example.weather.api.WeatherCallback;
 import com.example.weather.api.WeatherForecastInfo;
 import com.example.weather.api.WeatherInfo;
 import com.example.weather.api.WeatherService;
-import com.google.android.material.bottomsheet.BottomSheetBehavior;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -48,7 +49,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class MainActivity extends AppCompatActivity
+public class MainActivity extends AppCompatActivity implements BottomNavigationView.OnItemSelectedListener
 {
     private static final String TAG = "MainActivity";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
@@ -107,6 +108,9 @@ public class MainActivity extends AppCompatActivity
     private TextView tvRainForecast;
     private ProgressBar progressRain;
 
+    // 底部导航栏
+    private BottomNavigationView bottomNavigationView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) 
     {
@@ -140,6 +144,9 @@ public class MainActivity extends AppCompatActivity
         
         // 初始化位置服务
         initLocationService();
+        
+        // 设置底部导航栏选中项
+        bottomNavigationView.setSelectedItemId(R.id.nav_weather);
     }
     
     /**
@@ -765,6 +772,10 @@ public class MainActivity extends AppCompatActivity
             // 默认隐藏降水预报视图，直到获取到数据
             rainForecastView.setVisibility(View.GONE);
         }
+        
+        // 底部导航栏
+        bottomNavigationView = findViewById(R.id.bottomNavigation);
+        bottomNavigationView.setOnItemSelectedListener(this);
     }
     
     /**
@@ -976,5 +987,35 @@ public class MainActivity extends AppCompatActivity
     private void showToast(String message) 
     {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) 
+    {
+        int itemId = item.getItemId();
+        
+        if (itemId == R.id.nav_weather) 
+        {
+            // 已经在天气界面，无需操作
+            return true;
+        } 
+        else if (itemId == R.id.nav_add_todo) 
+        {
+            // 跳转到添加事项界面
+            Intent intent = new Intent(this, AddTodoActivity.class);
+            startActivity(intent);
+            finish();
+            return true;
+        } 
+        else if (itemId == R.id.nav_todo_list) 
+        {
+            // 跳转到清单界面
+            Intent intent = new Intent(this, TodoListActivity.class);
+            startActivity(intent);
+            finish();
+            return true;
+        }
+        
+        return false;
     }
 }
