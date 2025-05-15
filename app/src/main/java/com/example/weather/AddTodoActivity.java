@@ -61,8 +61,8 @@ public class AddTodoActivity extends AppCompatActivity implements BottomNavigati
     private CheckBox cbMonday, cbTuesday, cbWednesday, cbThursday, cbFriday, cbSaturday, cbSunday;
     
     // 时间选择器变量
-    private Calendar startTimeCalendar = Calendar.getInstance();
-    private Calendar endTimeCalendar = Calendar.getInstance();
+    private Calendar startTimeCalendar;
+    private Calendar endTimeCalendar;
     private SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
     
     // 位置服务
@@ -78,18 +78,29 @@ public class AddTodoActivity extends AppCompatActivity implements BottomNavigati
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_todo);
-
-        // 初始化视图
+        
+        // 底部导航栏
+        bottomNavigationView = findViewById(R.id.bottomNavigation);
+        bottomNavigationView.setOnItemSelectedListener(this);
+        bottomNavigationView.setSelectedItemId(R.id.nav_add_todo);
+        
+        // 初始化UI组件
         initViews();
         
-        // 设置事件监听
+        // 初始化Calendar对象，并设置秒和毫秒为0
+        startTimeCalendar = Calendar.getInstance();
+        startTimeCalendar.set(Calendar.SECOND, 0);
+        startTimeCalendar.set(Calendar.MILLISECOND, 0);
+        
+        endTimeCalendar = Calendar.getInstance();
+        endTimeCalendar.set(Calendar.SECOND, 0);
+        endTimeCalendar.set(Calendar.MILLISECOND, 0);
+        
+        // 设置监听器
         setupListeners();
         
         // 初始化位置服务
         initLocationService();
-        
-        // 设置底部导航栏选中项
-        bottomNavigationView.setSelectedItemId(R.id.nav_add_todo);
     }
     
     private void initViews() 
@@ -99,8 +110,6 @@ public class AddTodoActivity extends AppCompatActivity implements BottomNavigati
         btnStartTime = findViewById(R.id.btnStartTime);
         btnEndTime = findViewById(R.id.btnEndTime);
         btnAddEvent = findViewById(R.id.btnAddEvent);
-        bottomNavigationView = findViewById(R.id.bottomNavigation);
-        bottomNavigationView.setOnItemSelectedListener(this);
         
         // 初始化天气类型选择框
         cbSunny = findViewById(R.id.cbSunny);
@@ -151,7 +160,9 @@ public class AddTodoActivity extends AppCompatActivity implements BottomNavigati
                 (view, hourOfDay, minute) -> {
                     calendar.set(Calendar.HOUR_OF_DAY, hourOfDay);
                     calendar.set(Calendar.MINUTE, minute);
-                    
+                    calendar.set(Calendar.SECOND, 0);
+                    calendar.set(Calendar.MILLISECOND, 0);
+     
                     // 更新按钮文本
                     String timeText = timeFormat.format(calendar.getTime());
                     if (isStartTime) 
@@ -398,38 +409,8 @@ public class AddTodoActivity extends AppCompatActivity implements BottomNavigati
                         }
                     }
                     
-                    // 清空表单，准备添加新事项
-                    etTodoTitle.setText("");
-                    etTodoDescription.setText("");
-                    
-                    // 重置时间选择器
-                    startTimeCalendar = Calendar.getInstance();
-                    endTimeCalendar = Calendar.getInstance();
-                    btnStartTime.setText("开始时间");
-                    btnEndTime.setText("结束时间");
-                    
-                    // 重置天气类型选择
-                    cbSunny.setChecked(false);
-                    cbCloudy.setChecked(false);
-                    cbOvercast.setChecked(false);
-                    cbRainy.setChecked(false);
-                    cbOther.setChecked(false);
-                    
-                    // 重置星期几选择
-                    cbMonday.setChecked(false);
-                    cbTuesday.setChecked(false);
-                    cbWednesday.setChecked(false);
-                    cbThursday.setChecked(false);
-                    cbFriday.setChecked(false);
-                    cbSaturday.setChecked(false);
-                    cbSunday.setChecked(false);
-                    
-                    // 将焦点设置回标题输入框
-                    etTodoTitle.requestFocus();
-                    
-                    // 重新启用按钮
-                    btnAddEvent.setEnabled(true);
-                    btnAddEvent.setText("添加事项");
+                    // 重置表单
+                    resetForm();
                 });
             }
 
@@ -514,5 +495,47 @@ public class AddTodoActivity extends AppCompatActivity implements BottomNavigati
                 Toast.makeText(this, "需要位置权限才能获取天气数据", Toast.LENGTH_SHORT).show();
             }
         }
+    }
+
+    // 在重置表单时也确保设置秒和毫秒为0
+    private void resetForm() {
+        // 清空表单，准备添加新事项
+        etTodoTitle.setText("");
+        etTodoDescription.setText("");
+        
+        // 重置时间选择器
+        startTimeCalendar = Calendar.getInstance();
+        startTimeCalendar.set(Calendar.SECOND, 0);
+        startTimeCalendar.set(Calendar.MILLISECOND, 0);
+        
+        endTimeCalendar = Calendar.getInstance();
+        endTimeCalendar.set(Calendar.SECOND, 0);
+        endTimeCalendar.set(Calendar.MILLISECOND, 0);
+        
+        btnStartTime.setText("开始时间");
+        btnEndTime.setText("结束时间");
+        
+        // 重置天气类型选择
+        cbSunny.setChecked(false);
+        cbCloudy.setChecked(false);
+        cbOvercast.setChecked(false);
+        cbRainy.setChecked(false);
+        cbOther.setChecked(false);
+        
+        // 重置星期几选择
+        cbMonday.setChecked(false);
+        cbTuesday.setChecked(false);
+        cbWednesday.setChecked(false);
+        cbThursday.setChecked(false);
+        cbFriday.setChecked(false);
+        cbSaturday.setChecked(false);
+        cbSunday.setChecked(false);
+        
+        // 将焦点设置回标题输入框
+        etTodoTitle.requestFocus();
+        
+        // 重新启用按钮
+        btnAddEvent.setEnabled(true);
+        btnAddEvent.setText("添加事项");
     }
 } 

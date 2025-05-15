@@ -132,6 +132,13 @@ public class AlarmScheduler
         
         try 
         {
+            // 设置时间时将秒和毫秒设置为0
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(startTime);
+            calendar.set(Calendar.SECOND, 0);
+            calendar.set(Calendar.MILLISECOND, 0);
+            startTime = calendar.getTime();
+            
             // 创建提醒Intent
             Intent intent = new Intent(context, ReminderReceiver.class);
             intent.putExtra("TODO_ID", todo.getId());
