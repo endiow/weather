@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
@@ -31,6 +32,8 @@ import java.util.List;
 
 public class TodoListActivity extends AppCompatActivity implements BottomNavigationView.OnItemSelectedListener
 {
+    private static final String TAG = "TodoListActivity";
+    
     private RecyclerView rvTodayTodos;
     private RecyclerView rvOtherTodos;
     private TodoAdapter todayTodoAdapter;
@@ -44,7 +47,6 @@ public class TodoListActivity extends AppCompatActivity implements BottomNavigat
     private CardView cardTodayTodos;
     private CardView cardOtherTodos;
     private ImageButton btnDelete;
-    private String currentWeatherType = "晴"; // 默认值，实际应从MainActivity获取
     private boolean isDeleteMode = false; // 是否处于删除模式
 
     @Override
@@ -53,13 +55,6 @@ public class TodoListActivity extends AppCompatActivity implements BottomNavigat
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_todo_list);
 
-        // 获取当前天气类型
-        Intent intent = getIntent();
-        if (intent != null && intent.hasExtra("current_weather_type")) 
-        {
-            currentWeatherType = intent.getStringExtra("current_weather_type");
-        }
-        
         // 初始化视图
         initViews();
         
@@ -274,34 +269,15 @@ public class TodoListActivity extends AppCompatActivity implements BottomNavigat
                         currentDayOfWeek--; // 调整为0-6
                     }
                     
+                    // 打印日志以检查当前星期几是否正确
+                    Log.d("TodoListActivity", "当前星期几: " + (currentDayOfWeek + 1) + ", Calendar.DAY_OF_WEEK: " + calendar.get(Calendar.DAY_OF_WEEK));
+                    
                     for (Todo todo : result) 
                     {
-                        boolean isTodayTodo = false;
-                        
-                        // 检查是否匹配当天
+                        // 只根据星期几判断是否为今日事项
                         boolean[] daysOfWeek = todo.getDaysOfWeek();
                         if (daysOfWeek != null && daysOfWeek.length > currentDayOfWeek && 
                             daysOfWeek[currentDayOfWeek]) 
-                        {
-                            isTodayTodo = true;
-                        }
-                        
-                        // 检查是否匹配当前天气
-                        List<String> weatherTypes = todo.getWeatherTypes();
-                        boolean weatherMatches = false;
-                        if (weatherTypes != null && !weatherTypes.isEmpty() && currentWeatherType != null) 
-                        {
-                            for (String weatherType : weatherTypes) 
-                            {
-                                if (currentWeatherType.contains(weatherType) || weatherType.contains(currentWeatherType)) 
-                                {
-                                    weatherMatches = true;
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        if (isTodayTodo && weatherMatches) 
                         {
                             todayTodos.add(todo);
                         } 
@@ -349,9 +325,15 @@ public class TodoListActivity extends AppCompatActivity implements BottomNavigat
                         return 0;
                     });
                     
-                    // 对其他事项仅按时间排序，不考虑完成状态
+                    // 对其他事项也使用同样的排序逻辑：未完成在前，按照时间排序
                     Collections.sort(otherTodos, (todo1, todo2) -> {
-                        // 按开始时间排序
+                        // 首先按照完成状态排序
+                        if (todo1.isCompleted() != todo2.isCompleted()) 
+                        {
+                            return todo1.isCompleted() ? 1 : -1; // 未完成的排在前面
+                        }
+                        
+                        // 对于完成状态相同的事项，按开始时间排序
                         Date startTime1 = todo1.getStartTime();
                         Date startTime2 = todo2.getStartTime();
                         
@@ -547,28 +529,6 @@ public class TodoListActivity extends AppCompatActivity implements BottomNavigat
     }
 
     /**
-     * 检查待办事项是否匹配当前天气类型
-     */
-    private boolean matchesWeather(Todo todo) 
-    {
-        if (todo.getWeatherTypes() == null || todo.getWeatherTypes().isEmpty() || currentWeatherType == null) 
-        {
-            return false;
-        }
-        
-        // 判断当前天气是否在待办事项的天气类型列表中
-        for (String weatherType : todo.getWeatherTypes()) 
-        {
-            if (currentWeatherType.contains(weatherType) || weatherType.contains(currentWeatherType)) 
-            {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    /**
      * 检查待办事项是否匹配当前星期几
      */
     private boolean matchesDay(Todo todo) 
@@ -587,11 +547,36 @@ public class TodoListActivity extends AppCompatActivity implements BottomNavigat
             currentDayOfWeek--; // 调整为0-6
         }
         
+        Log.d(TAG, "检查待办事项[" + todo.getTitle() + "]是否匹配当前星期几: " + (currentDayOfWeek + 1));
+        Log.d(TAG, "待办事项设置的星期几: " + daysToString(daysOfWeek));
+        
         if (daysOfWeek == null || daysOfWeek.length <= currentDayOfWeek) 
         {
+            Log.d(TAG, "daysOfWeek无效或长度不足，返回false");
             return false;
         }
         
-        return daysOfWeek[currentDayOfWeek];
+        boolean matches = daysOfWeek[currentDayOfWeek];
+        Log.d(TAG, "星期匹配结果: " + matches);
+        return matches;
+    }
+    
+    /**
+     * 将星期几的布尔数组转换为可读字符串，用于调试
+     */
+    private String daysToString(boolean[] days) {
+        if (days == null) return "null";
+        StringBuilder sb = new StringBuilder("[");
+        String[] dayNames = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
+        for (int i = 0; i < days.length && i < dayNames.length; i++) {
+            if (days[i]) {
+                sb.append(dayNames[i]).append(", ");
+            }
+        }
+        if (sb.length() > 1) {
+            sb.setLength(sb.length() - 2);
+        }
+        sb.append("]");
+        return sb.toString();
     }
 } 
